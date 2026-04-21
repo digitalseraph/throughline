@@ -1,0 +1,22 @@
+[
+  {
+    "id": "3a2b9c6f-0000-0000-0000-abcdef654321",
+    "text": "Senior Frontend Engineer",
+    "createdAt": 1744740000000,
+    "categories": {
+      "commitment": "Full-time",
+      "location": "Los Angeles, CA / Remote - United States",
+      "team": "Product",
+      "department": "Engineering",
+      "level": "Senior"
+    },
+    "hostedUrl": "https://jobs.lever.co/netflix/3a2b9c6f",
+    "applyUrl": "https://jobs.lever.co/netflix/3a2b9c6f/apply",
+    "descriptionPlain": "Join our frontend team...",
+    "lists": [],
+    "salaryRange": {"min": 200000, "max": 350000, "currency": "USD", "interval": "per-year-salary"},
+    "workplaceType": "hybrid",
+    "additional": "",
+    "additionalPlain": ""
+  }
+]
