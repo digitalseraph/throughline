@@ -10,7 +10,7 @@ This repository was extracted from the `digitalseraph-meta` monorepo after Plan 
 - Laravel Socialite (Google + GitHub) — no Fortify in this install
 - Inertia v2 + Vue 3 + TypeScript + Tailwind v3 (not v4)
 - Ziggy for the JS `route()` helper
-- PostgreSQL 16 + Redis + Horizon (Horizon can't `horizon:work` on Windows — Linux-only via `ext-pcntl`)
+- PostgreSQL 16 + Redis + Horizon — both run via `compose.yaml` in dev (`docker compose up -d`). Horizon can't `horizon:work` on Windows — Linux-only via `ext-pcntl`; dev uses `queue:listen`.
 - PHPUnit v11.5; Pint for formatting
 
 ## Local setup
@@ -20,7 +20,7 @@ composer install
 npm install
 cp .env.example .env
 php artisan key:generate
-createdb throughline
+docker compose up -d
 php artisan migrate --seed
 composer run dev
 ```
