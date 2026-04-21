@@ -59,10 +59,12 @@ class FetchJobSourceTest extends TestCase
         $source = JobSource::factory()->create(['source_type' => 'greenhouse', 'identifier' => 'stripe']);
 
         (new FetchJobSource($source->id))->handle(app(DriverRegistry::class));
-        $initial = CanonicalJob::count();
+        $initialRowCount = CanonicalJob::count();
+        $pushesAfterFirst = count(Queue::pushed(EmbedJob::class));
 
         (new FetchJobSource($source->id))->handle(app(DriverRegistry::class));
 
-        $this->assertSame($initial, CanonicalJob::count(), 'idempotent upsert on (source, source_id)');
+        $this->assertSame($initialRowCount, CanonicalJob::count(), 'idempotent upsert on (source, source_id)');
+        $this->assertSame($pushesAfterFirst, count(Queue::pushed(EmbedJob::class)), 'EmbedJob not re-dispatched for unchanged rows');
     }
 }

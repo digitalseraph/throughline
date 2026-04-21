@@ -53,6 +53,14 @@ class FetchJobSource implements ShouldQueue
                 'consecutive_failures' => $failures,
                 'is_enabled' => $failures < 3,
             ]);
+        } catch (\Throwable $e) {
+            $failures = $source->consecutive_failures + 1;
+            $source->update([
+                'last_error' => 'Unexpected: '.$e->getMessage(),
+                'consecutive_failures' => $failures,
+                'is_enabled' => $failures < 3,
+            ]);
+            throw $e;
         }
     }
 }
