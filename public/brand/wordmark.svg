@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 150" role="img" aria-label="Throughline">
+  <style>
+    .wm { font-family: 'Inter', system-ui, sans-serif; font-weight: 800; letter-spacing: -0.045em; fill: #1a1410; }
+  </style>
+  <text class="wm" x="0" y="104" font-size="120">Throughline</text>
+  <g fill="#a83a1a">
+    <rect x="6" y="128" width="750" height="8" rx="4"/>
+    <circle cx="10" cy="132" r="7"/>
+    <circle cx="199" cy="132" r="7"/>
+    <circle cx="388" cy="132" r="7"/>
+    <circle cx="577" cy="132" r="7"/>
+    <circle cx="752" cy="132" r="7"/>
+  </g>
+</svg>
