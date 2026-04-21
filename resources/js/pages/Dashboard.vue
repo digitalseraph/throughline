@@ -1,40 +1,25 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
-import PlaceholderPattern from '../components/PlaceholderPattern.vue';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-    },
-];
+import AppLayout from '@/layouts/AppLayout.vue'
+import { Head } from '@inertiajs/vue3'
+import WaypointThread from '@/components/brand/WaypointThread.vue'
 
 defineProps<{
-    name?: string;
-}>();
+  user: { name: string }
+}>()
 </script>
 
 <template>
+  <AppLayout>
     <Head title="Dashboard" />
-
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-            <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
-                </div>
-                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
-                </div>
-                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
-                </div>
-            </div>
-            <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border md:min-h-min">
-                <PlaceholderPattern />
-            </div>
-        </div>
-    </AppLayout>
+    <div class="max-w-3xl mx-auto py-16 px-8">
+      <p class="font-mono text-[11px] uppercase tracking-widest text-oxblood mb-4">Your Throughline</p>
+      <h1 class="font-display text-4xl leading-tight text-ink mb-6" style="font-variation-settings: 'opsz' 144, 'SOFT' 30;">
+        Welcome, <em class="italic">{{ user.name }}</em>.
+      </h1>
+      <p class="font-serif italic text-xl text-ink-2 leading-relaxed mb-8">
+        Your feed will appear here once you've added a resume and a search profile. We'll begin with your resume.
+      </p>
+      <WaypointThread :width="240" :height="8" :dot-count="5" />
+    </div>
+  </AppLayout>
 </template>
