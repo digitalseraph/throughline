@@ -68,6 +68,25 @@ class ResumePipelineTest extends TestCase
         $this->assertSame('unparseable', $resume->parsed_text);
     }
 
+    public function test_extraction_failure_sets_parse_failed(): void
+    {
+        $user = User::factory()->create();
+        $resume = Resume::factory()->for($user)->create([
+            'source_file_path' => 'does-not-exist.pdf',
+            'source_mime' => 'application/pdf',
+        ]);
+
+        // AiClient should never be called if extraction fails.
+        $ai = Mockery::mock(AiClient::class);
+        $ai->shouldNotReceive('forUser');
+        $this->app->instance(AiClient::class, $ai);
+
+        (new ParseResume($resume->id))->handle($ai);
+
+        $resume->refresh();
+        $this->assertSame('parse_failed', $resume->parse_status);
+    }
+
     public function test_embed_resume_writes_vector_and_dispatches_recompute(): void
     {
         Queue::fake();
