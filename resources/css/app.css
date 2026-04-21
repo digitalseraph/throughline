@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -87,5 +89,14 @@ html {
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+@layer base {
+    body {
+        background-color: #fdfaf5;
+        color: #1a1410;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-feature-settings: "cv05", "cv09", "cv11", "ss01";
     }
 }

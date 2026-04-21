@@ -12,7 +12,10 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Instrument Sans', ...defaultTheme.fontFamily.sans],
+                display: ['Fraunces', 'IBM Plex Serif', 'Georgia', 'serif'],
+                sans: ['Inter', 'system-ui', ...defaultTheme.fontFamily.sans],
+                serif: ['IBM Plex Serif', 'Georgia', ...defaultTheme.fontFamily.serif],
+                mono: ['IBM Plex Mono', 'ui-monospace', ...defaultTheme.fontFamily.mono],
             },
             borderRadius: {
                 lg: 'var(--radius)',
@@ -20,6 +23,15 @@ export default {
                 sm: 'calc(var(--radius) - 4px)',
             },
             colors: {
+                // Throughline brand palette
+                bone: '#fdfaf5',
+                'bone-2': '#f5ede0',
+                ink: '#1a1410',
+                'ink-2': '#3a2e26',
+                'ink-3': '#6b5d52',
+                oxblood: '#a83a1a',
+                hairline: 'rgba(26, 20, 16, 0.12)',
+                // Starter-kit shadcn/ui semantic tokens
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',
                 card: {
