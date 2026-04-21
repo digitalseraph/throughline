@@ -1,6 +1,8 @@
 # Throughline — Claude Code instructions
 
-A multi-user Laravel app that helps job seekers find roles that fit their career arc. See the design spec at `docs/superpowers/specs/2026-04-21-throughline-design.md` in the monorepo root.
+A multi-user Laravel app that helps job seekers find roles that fit their career arc. See the design spec at [`docs/superpowers/specs/2026-04-21-throughline-design.md`](docs/superpowers/specs/2026-04-21-throughline-design.md).
+
+This repository was extracted from the `digitalseraph-meta` monorepo after Plan 1 (Foundation) completed. Historical plan artifacts under `docs/superpowers/` reference the pre-extraction layout (`web/throughline-web/...`); see the layout notes at the top of each document.
 
 ## Stack
 
