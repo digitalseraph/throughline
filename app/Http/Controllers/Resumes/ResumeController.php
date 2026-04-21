@@ -76,10 +76,18 @@ class ResumeController extends Controller
     {
         abort_unless($resume->user_id === auth()->id(), 403);
 
-        if ($resume->source_file_path) {
-            Storage::disk('local')->delete($resume->source_file_path);
-        }
+        $filePath = $resume->source_file_path;
         $resume->delete();
+
+        if ($filePath) {
+            // Best-effort cleanup — a leaked file is recoverable, but a
+            // DB row pointing at a missing file would 500 any stream/stat.
+            try {
+                Storage::disk('local')->delete($filePath);
+            } catch (\Throwable $e) {
+                \Log::warning('Resume file cleanup failed', ['path' => $filePath, 'error' => $e->getMessage()]);
+            }
+        }
 
         return redirect()->route('resumes.index')->with('status', 'Resume deleted.');
     }

@@ -15,6 +15,8 @@ function onFile(event: Event) {
 }
 
 function submit() {
+  error.value = null;
+
   if (!file.value || !name.value.trim()) {
     error.value = 'Name and file are required.';
     return;
