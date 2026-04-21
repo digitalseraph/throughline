@@ -65,4 +65,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Resume::class);
     }
+
+    public function searchProfiles(): HasMany
+    {
+        return $this->hasMany(SearchProfile::class);
+    }
 }
