@@ -29,6 +29,7 @@ class RemoteOkDriverTest extends TestCase
         $this->assertSame('global', $jobs[0]->sourceBoard);
         $this->assertSame(120000, $jobs[0]->compMin);
         $this->assertSame(180000, $jobs[0]->compMax);
+        $this->assertSame('USD', $jobs[0]->compCurrency);
     }
 
     public function test_null_comp_preserved(): void
@@ -42,6 +43,7 @@ class RemoteOkDriverTest extends TestCase
         $this->assertSame('987655', $jobs[1]->sourceId);
         $this->assertNull($jobs[1]->compMin);
         $this->assertNull($jobs[1]->compMax);
+        $this->assertNull($jobs[1]->compCurrency);
     }
 
     public function test_validate_identifier_accepts_null(): void
