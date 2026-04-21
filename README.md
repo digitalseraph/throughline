@@ -2,7 +2,7 @@
 
 Multi-user web app that helps job seekers find roles fitting the career arc they're already building.
 
-**Product stance:** radical match transparency, depth over breadth, career-narrative lens. See [`docs/superpowers/specs/2026-04-21-throughline-design.md`](../../docs/superpowers/specs/2026-04-21-throughline-design.md) for the full design.
+**Product stance:** radical match transparency, depth over breadth, career-narrative lens. See [`docs/superpowers/specs/2026-04-21-throughline-design.md`](docs/superpowers/specs/2026-04-21-throughline-design.md) for the full design.
 
 ## Requirements
 
@@ -57,4 +57,4 @@ No host strings are ever hardcoded. To move to a new domain:
 
 ## Status
 
-Foundation only. See `../../docs/superpowers/plans/` for the full plan roadmap.
+Foundation only. See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap.
