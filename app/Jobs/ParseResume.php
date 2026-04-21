@@ -29,7 +29,18 @@ class ParseResume implements ShouldQueue
             return; // idempotent
         }
 
-        $rawText = $this->extractRawText($resume);
+        try {
+            $rawText = $this->extractRawText($resume);
+        } catch (\Throwable $e) {
+            // PDF/DOCX extraction failed deterministically (bad file, missing
+            // binary). Retrying won't help; surface a clear state to the UI.
+            $resume->parsed_text = '';
+            $resume->parse_status = 'parse_failed';
+            $resume->save();
+
+            return;
+        }
+
         $resume->parsed_text = $rawText;
         $resume->save();
 

@@ -31,7 +31,11 @@ class EmbedResume implements ShouldQueue
         try {
             $vector = $ai->forUser($resume->user)->embed($resume->parsed_text, 'resume');
         } catch (CostCeilingExceeded $e) {
-            $this->release(now()->diffInSeconds(now()->endOfDay()));
+            // Retry after the ceiling window rolls over. Floor at 60s so the
+            // queue worker doesn't tight-loop if we hit the ceiling in the
+            // last second of the day.
+            $secondsUntilMidnight = (int) now()->diffInSeconds(now()->endOfDay());
+            $this->release(max(60, $secondsUntilMidnight));
 
             return;
         } catch (ProviderRateLimited $e) {
