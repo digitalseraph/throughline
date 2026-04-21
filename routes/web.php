@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Resumes\ResumeController;
+use App\Http\Controllers\SearchProfiles\SearchProfileController;
 use App\Services\Brand\BrandConfig;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -28,6 +29,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/resumes/{resume}', [ResumeController::class, 'destroy'])->name('resumes.destroy');
     Route::post('/resumes/{resume}/default', [ResumeController::class, 'setDefault'])->name('resumes.default');
     Route::post('/resumes/{resume}/retry', [ResumeController::class, 'retry'])->name('resumes.retry');
+
+    Route::resource('search-profiles', SearchProfileController::class)
+        ->parameters(['search-profiles' => 'profile'])
+        ->except(['show']);
 });
 
 require __DIR__.'/settings.php';
