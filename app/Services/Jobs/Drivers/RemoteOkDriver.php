@@ -64,7 +64,7 @@ class RemoteOkDriver implements JobSourceDriver
             remoteMode: 'remote_only',
             compMin: $salaryMin !== null ? (int) $salaryMin : null,
             compMax: $salaryMax !== null ? (int) $salaryMax : null,
-            compCurrency: null,
+            compCurrency: $salaryMin !== null ? 'USD' : null,
             seniority: null,
             employmentType: null,
             applyUrl: $raw['apply_url'] ?? ($raw['url'] ?? ''),
