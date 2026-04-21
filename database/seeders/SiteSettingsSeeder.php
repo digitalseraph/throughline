@@ -26,7 +26,7 @@ class SiteSettingsSeeder extends Seeder
         ];
 
         foreach ($defaults as $row) {
-            SiteSetting::updateOrCreate(['key' => $row['key']], $row);
+            SiteSetting::firstOrCreate(['key' => $row['key']], $row);
         }
     }
 }
