@@ -10,11 +10,13 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "anthropic-ai/sdk": "^0.16.0",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.45",
         "laravel/socialite": "^5.26",
         "laravel/tinker": "^2.10.1",
+        "openai-php/laravel": "^0.19.1",
         "predis/predis": "^3.4",
         "tightenco/ziggy": "^2.4"
     },
