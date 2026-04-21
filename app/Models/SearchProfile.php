@@ -11,7 +11,6 @@ class SearchProfile extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'resume_id',
         'name',
         'role_keywords',
