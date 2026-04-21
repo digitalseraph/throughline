@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FeedController;
 use App\Http\Controllers\Resumes\ResumeController;
 use App\Http\Controllers\SearchProfiles\SearchProfileController;
 use App\Services\Brand\BrandConfig;
@@ -33,6 +34,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('search-profiles', SearchProfileController::class)
         ->parameters(['search-profiles' => 'profile'])
         ->except(['show']);
+
+    Route::get('/feed/{profile}', [FeedController::class, 'show'])->name('feed.show');
 });
 
 require __DIR__.'/settings.php';
