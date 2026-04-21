@@ -18,9 +18,29 @@ const props = defineProps<{
 
 let pollHandle: number | undefined;
 
+function isTerminalState(): boolean {
+  // parse_failed is terminal; parsed + has_embedding is the ready state.
+  return props.resume.parse_status === 'parse_failed'
+    || (props.resume.parse_status === 'parsed' && props.resume.has_embedding);
+}
+
+function startPolling(): void {
+  pollHandle = window.setInterval(() => {
+    router.reload({
+      only: ['resume'],
+      onSuccess: () => {
+        if (isTerminalState() && pollHandle) {
+          clearInterval(pollHandle);
+          pollHandle = undefined;
+        }
+      },
+    });
+  }, 3000);
+}
+
 onMounted(() => {
-  if (props.resume.parse_status === 'pending' || !props.resume.has_embedding) {
-    pollHandle = window.setInterval(() => router.reload({ only: ['resume'] }), 3000);
+  if (!isTerminalState()) {
+    startPolling();
   }
 });
 
