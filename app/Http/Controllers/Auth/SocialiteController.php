@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SocialAccount;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Laravel\Socialite\Facades\Socialite;
@@ -23,7 +24,7 @@ class SocialiteController extends Controller
         return Socialite::driver($provider)->redirect();
     }
 
-    public function callback(string $provider): RedirectResponse
+    public function callback(Request $request, string $provider): RedirectResponse
     {
         $this->guardProvider($provider);
 
@@ -48,17 +49,26 @@ class SocialiteController extends Controller
                     'refresh_token' => $socialUser->refreshToken,
                 ]);
 
+                $account->user->update(['last_login_at' => now()]);
+
                 return $account->user;
             }
 
-            $user = User::where('email', $socialUser->getEmail())->first()
-                ?? User::create([
+            $existingUser = User::where('email', $socialUser->getEmail())->first();
+
+            if ($existingUser) {
+                $existingUser->update(['last_login_at' => now()]);
+                $user = $existingUser;
+            } else {
+                $user = User::create([
                     'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? $socialUser->getEmail(),
                     'email' => $socialUser->getEmail(),
                     'email_verified_at' => now(),
                     'password' => null,
                     'role' => User::count() === 0 ? 'admin' : 'user',
+                    'last_login_at' => now(),
                 ]);
+            }
 
             SocialAccount::create([
                 'user_id' => $user->id,
@@ -71,7 +81,7 @@ class SocialiteController extends Controller
             return $user;
         });
 
-        $user->forceFill(['last_login_at' => now()])->save();
+        $request->session()->regenerate();
 
         Auth::login($user, remember: true);
 

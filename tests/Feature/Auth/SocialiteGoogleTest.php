@@ -80,6 +80,28 @@ class SocialiteGoogleTest extends TestCase
         $this->assertSame(0, User::count());
     }
 
+    public function test_second_oauth_created_user_does_not_become_admin(): void
+    {
+        User::factory()->create(['role' => 'admin']);
+
+        $socialUser = $this->fakeSocialiteUser([
+            'id' => 'g-second',
+            'email' => 'second@example.com',
+            'name' => 'Second User',
+        ]);
+
+        $provider = Mockery::mock(Provider::class);
+        $provider->shouldReceive('user')->andReturn($socialUser);
+        Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+
+        $this->get('/auth/google/callback');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'second@example.com',
+            'role' => 'user',
+        ]);
+    }
+
     private function fakeSocialiteUser(array $attrs): SocialiteUser
     {
         $user = new SocialiteUser;
