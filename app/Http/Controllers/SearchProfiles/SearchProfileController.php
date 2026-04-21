@@ -35,7 +35,7 @@ class SearchProfileController extends Controller
 
     public function edit(SearchProfile $profile): Response
     {
-        abort_unless($profile->user_id === auth()->id(), 403);
+        abort_unless((int) $profile->user_id === auth()->id(), 403);
 
         return $this->renderForm($profile);
     }
@@ -56,7 +56,7 @@ class SearchProfileController extends Controller
 
     public function destroy(SearchProfile $profile): RedirectResponse
     {
-        abort_unless($profile->user_id === auth()->id(), 403);
+        abort_unless((int) $profile->user_id === auth()->id(), 403);
         $profile->delete();
 
         return redirect()->route('search-profiles.index')->with('status', 'Profile deleted.');
