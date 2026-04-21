@@ -11,6 +11,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        DB::statement('DROP EXTENSION IF EXISTS vector');
+        DB::statement('DROP EXTENSION IF EXISTS vector CASCADE');
     }
 };
