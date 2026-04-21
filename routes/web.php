@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\JobSourceController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\Resumes\ResumeController;
 use App\Http\Controllers\SearchProfiles\SearchProfileController;
+use App\Http\Middleware\EnsureAdmin;
 use App\Services\Brand\BrandConfig;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -37,6 +39,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/feed/{profile}', [FeedController::class, 'show'])->name('feed.show');
 });
+
+Route::middleware(['auth', EnsureAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::resource('job-sources', JobSourceController::class)->except('show');
+        Route::post('job-sources/{job_source}/fetch-now', [JobSourceController::class, 'fetchNow'])->name('job-sources.fetch-now');
+    });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
