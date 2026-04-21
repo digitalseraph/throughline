@@ -22,7 +22,7 @@ class GreenhouseDriverTest extends TestCase
         $jobs = iterator_to_array(app(GreenhouseDriver::class)->fetch($source));
 
         $this->assertGreaterThan(0, count($jobs));
-        $this->assertSame('greenhouse', $jobs[0]->sourceBoard === 'stripe' ? 'greenhouse' : 'greenhouse');
+        $this->assertSame('stripe', $jobs[0]->sourceBoard);
         $this->assertNotEmpty($jobs[0]->sourceId);
         $this->assertNotEmpty($jobs[0]->title);
         $this->assertNotEmpty($jobs[0]->applyUrl);
