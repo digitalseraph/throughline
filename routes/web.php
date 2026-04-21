@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Resumes\ResumeController;
 use App\Services\Brand\BrandConfig;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,6 +19,16 @@ Route::get('dashboard', function () {
         'user' => ['name' => auth()->user()->name],
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/resumes', [ResumeController::class, 'index'])->name('resumes.index');
+    Route::post('/resumes', [ResumeController::class, 'store'])->name('resumes.store');
+    Route::get('/resumes/{resume}', [ResumeController::class, 'show'])->name('resumes.show');
+    Route::patch('/resumes/{resume}', [ResumeController::class, 'update'])->name('resumes.update');
+    Route::delete('/resumes/{resume}', [ResumeController::class, 'destroy'])->name('resumes.destroy');
+    Route::post('/resumes/{resume}/default', [ResumeController::class, 'setDefault'])->name('resumes.default');
+    Route::post('/resumes/{resume}/retry', [ResumeController::class, 'retry'])->name('resumes.retry');
+});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
