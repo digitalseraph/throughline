@@ -3,10 +3,14 @@ import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, FileText, Search } from 'lucide-vue-next';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/vue3';
+import { BookOpen, Folder, LayoutGrid, FileText, Search, Settings2 } from 'lucide-vue-next';
 import Wordmark from '@/components/brand/Wordmark.vue';
+import { computed } from 'vue';
+
+const page = usePage<SharedData>();
+const isAdmin = computed(() => (page.props.auth?.user as any)?.role === 'admin');
 
 const mainNavItems: NavItem[] = [
     {
@@ -38,6 +42,14 @@ const footerNavItems: NavItem[] = [
         icon: BookOpen,
     },
 ];
+
+const adminNavItems: NavItem[] = [
+    {
+        title: 'Admin · Sources',
+        href: '/admin/job-sources',
+        icon: Settings2,
+    },
+];
 </script>
 
 <template>
@@ -56,6 +68,7 @@ const footerNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
+            <NavMain v-if="isAdmin" :items="adminNavItems" />
         </SidebarContent>
 
         <SidebarFooter>
