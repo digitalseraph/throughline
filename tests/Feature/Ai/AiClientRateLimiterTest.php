@@ -40,9 +40,10 @@ class AiClientRateLimiterTest extends TestCase
         }
     }
 
-    public function test_blocks_when_local_token_bucket_empty(): void
+    public function test_blocks_when_usage_exceeds_window_max(): void
     {
-        Cache::put('ai_ratelimit:openai', 0, now()->addSeconds(30));
+        // Simulate a full window — the counter is already at the max allowed usage.
+        Cache::put('ai_ratelimit:openai', 500, now()->addSeconds(30));
 
         $this->expectException(ProviderRateLimited::class);
         app(AiClient::class)->forUser(null)->embed('x', 'job');
