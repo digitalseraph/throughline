@@ -62,14 +62,7 @@ class AiClient
 
         $model = $this->settings->get('anthropic_parse_model', 'claude-sonnet-4-6');
 
-        $prompt = <<<PROMPT
-You extract structured data from resumes. Return ONLY compact JSON matching:
-{"text": "<plain-text summary>", "structured": {"name": "...", "titles": [...], "companies": [...], "skills": [...], "years_experience": <int|null>}}
-
-Resume follows:
----
-{$rawText}
-PROMPT;
+        $system = 'You extract structured data from resumes. Return ONLY compact JSON matching: {"text": "<plain-text summary>", "structured": {"name": "...", "titles": [...], "companies": [...], "skills": [...], "years_experience": <int|null>}}';
 
         $response = Http::withHeaders([
             'x-api-key' => config('services.anthropic.api_key'),
@@ -77,7 +70,8 @@ PROMPT;
         ])->acceptJson()->asJson()->post('https://api.anthropic.com/v1/messages', [
             'model' => $model,
             'max_tokens' => 2048,
-            'messages' => [['role' => 'user', 'content' => $prompt]],
+            'system' => $system,
+            'messages' => [['role' => 'user', 'content' => $rawText]],
         ]);
 
         if ($response->status() === 429) {
@@ -101,6 +95,14 @@ PROMPT;
         return $parsed;
     }
 
+    /**
+     * Enforces the per-user daily cost ceiling. The check-then-insert
+     * sequence is non-atomic by design: concurrent calls can both pass
+     * the guard and together overshoot by one call per concurrent pair.
+     * This is acceptable per design spec §4 ("soft-enforced"), since the
+     * overshoot is bounded to a few cents and the alternative (per-user
+     * Redis lock or DB-level advisory lock) costs more than it saves.
+     */
     protected function enforceCostCeiling(): void
     {
         if (! $this->actingUser) {
@@ -121,19 +123,19 @@ PROMPT;
     {
         $config = config("services.ai.rate_limit.{$provider}");
         $key = "ai_ratelimit:{$provider}";
-        $current = Cache::get($key);
 
-        if ($current === null) {
-            Cache::put($key, $config['max'] - 1, now()->addSeconds($config['per_seconds']));
+        // Atomic increment avoids the read-then-decrement race that two
+        // concurrent requests could exploit to both pass a guard check.
+        $used = Cache::increment($key);
 
-            return;
+        if ($used === 1) {
+            // First call in the window — set expiry so the counter resets.
+            Cache::put($key, 1, now()->addSeconds($config['per_seconds']));
         }
 
-        if ($current <= 0) {
+        if ($used > $config['max']) {
             throw new ProviderRateLimited($provider, $config['per_seconds']);
         }
-
-        Cache::decrement($key);
     }
 
     protected function recordUsage(
