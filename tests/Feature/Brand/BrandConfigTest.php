@@ -4,10 +4,13 @@ namespace Tests\Feature\Brand;
 
 use App\Services\Brand\BrandConfig;
 use App\Services\SiteSettings;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class BrandConfigTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_name_falls_back_to_config_default(): void
     {
         config()->set('brand.name', 'Throughline');
