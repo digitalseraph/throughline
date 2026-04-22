@@ -27,7 +27,7 @@ test('user can sign up, upload resume, create profile, and see ranked feed', asy
   await page.waitForLoadState('networkidle');
 
   // Wait for parse + embed (fake AiClient is instant in testing env).
-  await expect(page.getByText(/ready to match/i)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText(/ready to match/i)).toBeVisible({ timeout: 5000 });
 
   // Create search profile.
   await page.goto('/search-profiles/create');

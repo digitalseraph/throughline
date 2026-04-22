@@ -1,7 +1,7 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
-// @ts-ignore
+// @ts-expect-error -- window.Pusher is not typed on the Window interface
 window.Pusher = Pusher;
 
 const key = import.meta.env.VITE_REVERB_APP_KEY as string;
@@ -21,5 +21,5 @@ export const echo = new Echo({
 });
 
 // Expose globally for quick dev debugging.
-// @ts-ignore
+// @ts-expect-error -- window.Echo is not typed on the Window interface
 window.Echo = echo;
