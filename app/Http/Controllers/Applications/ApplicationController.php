@@ -9,11 +9,148 @@ use App\Models\JobMatch;
 use App\Services\Applications\EventWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class ApplicationController extends Controller
 {
     public function __construct(protected EventWriter $events) {}
+
+    public function index(Request $request): InertiaResponse
+    {
+        $statuses = Application::STATUSES;
+        $terminalStatuses = Application::TERMINAL_STATUSES;
+
+        $apps = Application::with('canonicalJob')
+            ->where('user_id', $request->user()->id)
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        $columns = collect($statuses)->mapWithKeys(fn ($s) => [
+            $s => $apps->where('status', $s)->values()->map(fn ($app) => [
+                'id' => $app->id,
+                'title' => $app->canonicalJob?->title ?? '—',
+                'company' => $app->canonicalJob?->company_name ?? '—',
+                'status' => $app->status,
+                'next_action_at' => $app->next_action_at?->toDateString(),
+                'updated_at' => $app->updated_at->toDateTimeString(),
+            ])->all(),
+        ])->all();
+
+        return Inertia::render('applications/Index', compact('columns', 'statuses', 'terminalStatuses'));
+    }
+
+    public function show(Request $request, Application $application): InertiaResponse
+    {
+        abort_unless((int) $application->user_id === $request->user()->id, 403);
+
+        $application->load('canonicalJob', 'resume', 'events', 'contacts', 'documents');
+
+        return Inertia::render('applications/Show', [
+            'application' => [
+                'id' => $application->id,
+                'status' => $application->status,
+                'notes' => $application->notes,
+                'applied_at' => $application->applied_at?->toDateTimeString(),
+                'next_action_at' => $application->next_action_at?->toDateTimeString(),
+                'stage2_snapshot' => $application->stage2_snapshot,
+                'is_terminal' => $application->isTerminal(),
+                'canonical_job' => $application->canonicalJob ? [
+                    'id' => $application->canonicalJob->id,
+                    'title' => $application->canonicalJob->title,
+                    'company_name' => $application->canonicalJob->company_name,
+                    'location_raw' => $application->canonicalJob->location_raw,
+                    'apply_url' => $application->canonicalJob->apply_url,
+                ] : null,
+                'resume' => $application->resume ? [
+                    'id' => $application->resume->id,
+                    'name' => $application->resume->name,
+                ] : null,
+                'events' => $application->events->map(fn ($e) => [
+                    'id' => $e->id,
+                    'type' => $e->type,
+                    'payload' => $e->payload,
+                    'occurred_at' => $e->occurred_at->toDateTimeString(),
+                ])->all(),
+                'contacts' => $application->contacts->map(fn ($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'role' => $c->role,
+                ])->all(),
+                'documents' => $application->documents->map(fn ($d) => [
+                    'id' => $d->id,
+                    'kind' => $d->kind,
+                    'label' => $d->label,
+                ])->all(),
+            ],
+            'statuses' => Application::STATUSES,
+            'terminalStatuses' => Application::TERMINAL_STATUSES,
+        ]);
+    }
+
+    public function update(Request $request, Application $application): RedirectResponse
+    {
+        abort_unless((int) $application->user_id === $request->user()->id, 403);
+
+        $request->validate([
+            'status' => ['nullable', 'string', 'in:'.implode(',', Application::STATUSES)],
+            'notes' => ['nullable', 'string'],
+            'next_action_at' => ['nullable', 'date'],
+        ]);
+
+        DB::transaction(function () use ($request, $application) {
+            $oldStatus = $application->status;
+            $newStatus = $request->input('status');
+            $newNotes = $request->input('notes');
+            $newNextAction = $request->input('next_action_at');
+
+            $dirty = [];
+
+            if ($newStatus !== null && $newStatus !== $oldStatus) {
+                $dirty['status'] = $newStatus;
+                if ($newStatus === 'applied' && $application->applied_at === null) {
+                    $dirty['applied_at'] = now();
+                }
+            }
+
+            if ($newNotes !== null) {
+                $dirty['notes'] = $newNotes;
+            }
+
+            if (array_key_exists('next_action_at', $request->all())) {
+                $dirty['next_action_at'] = $newNextAction;
+            }
+
+            if ($dirty) {
+                $application->update($dirty);
+            }
+
+            if ($newStatus !== null && $newStatus !== $oldStatus) {
+                $this->events->logStatusChange($application, $oldStatus, $newStatus);
+            }
+
+            if ($newNotes !== null && $newNotes !== '') {
+                $this->events->logNote($application, $newNotes);
+            }
+        });
+
+        return redirect()->back()->with('status', 'Application updated.');
+    }
+
+    public function destroy(Request $request, Application $application): RedirectResponse
+    {
+        abort_unless((int) $application->user_id === $request->user()->id, 403);
+
+        DB::transaction(function () use ($application) {
+            $old = $application->status;
+            $application->update(['status' => 'withdrawn']);
+            $this->events->logStatusChange($application, $old, 'withdrawn');
+        });
+
+        return redirect()->route('applications.index')->with('status', 'Application withdrawn.');
+    }
 
     public function store(StoreApplicationRequest $request): RedirectResponse|JsonResponse
     {
