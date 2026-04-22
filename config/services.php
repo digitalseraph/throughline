@@ -70,6 +70,10 @@ return [
         'results_per_page' => env('USAJOBS_RESULTS_PER_PAGE', 25),
     ],
 
+    'pdftotext' => [
+        'binary' => env('PDFTOTEXT_BINARY'), // null = Spatie auto-detect
+    ],
+
     'ai' => [
         'embedding_dimensions' => 1536,
         // Approx cost per 1K tokens — used for ai_usage_events.estimated_cost_usd

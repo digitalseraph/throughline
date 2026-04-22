@@ -25,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+        // Exclude test-only helper routes from CSRF verification so the
+        // Playwright APIRequestContext (which has no session/token) can hit them.
+        $middleware->validateCsrfTokens(except: ['testing/*']);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
