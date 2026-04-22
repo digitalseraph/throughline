@@ -1,0 +1,22 @@
+[
+  {
+    "id": "2f1a8d5e-0000-0000-0000-abcdef123456",
+    "text": "Senior Backend Engineer",
+    "createdAt": 1744740000000,
+    "categories": {
+      "commitment": "Full-time",
+      "location": "Los Angeles, CA",
+      "team": "Streaming Services",
+      "department": "Engineering",
+      "level": "Senior"
+    },
+    "hostedUrl": "https://jobs.lever.co/netflix/2f1a8d5e",
+    "applyUrl": "https://jobs.lever.co/netflix/2f1a8d5e/apply",
+    "descriptionPlain": "We are looking for...",
+    "lists": [{"text": "Requirements", "content": "<p>5+ years...</p>"}],
+    "salaryRange": {"min": 220000, "max": 380000, "currency": "USD", "interval": "per-year-salary"},
+    "workplaceType": "on-site",
+    "additional": "",
+    "additionalPlain": ""
+  }
+]

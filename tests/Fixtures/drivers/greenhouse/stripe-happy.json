@@ -1,0 +1,17 @@
+{
+  "jobs": [
+    {
+      "id": 4288123,
+      "title": "Software Engineer, Platform",
+      "updated_at": "2026-04-15T19:20:00Z",
+      "location": {"name": "San Francisco, CA"},
+      "content": "<p>Work on core platform...</p>",
+      "absolute_url": "https://boards.greenhouse.io/stripe/jobs/4288123",
+      "departments": [{"name": "Engineering"}],
+      "offices": [{"name": "San Francisco"}, {"name": "Remote"}],
+      "metadata": [
+        {"name": "compensation", "value": "$180,000 - $240,000 USD"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: throughline-postgres
+    environment:
+      POSTGRES_DB: throughline
+      POSTGRES_USER: throughline
+      POSTGRES_PASSWORD: throughline
+    ports:
+      - "5432:5432"
+    volumes:
+      - throughline-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U throughline -d throughline"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: throughline-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  throughline-pgdata:

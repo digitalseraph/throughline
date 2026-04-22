@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\JobSourceController;
+use App\Http\Controllers\FeedController;
+use App\Http\Controllers\Resumes\ResumeController;
+use App\Http\Controllers\SearchProfiles\SearchProfileController;
+use App\Http\Middleware\EnsureAdmin;
 use App\Services\Brand\BrandConfig;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,6 +23,30 @@ Route::get('dashboard', function () {
         'user' => ['name' => auth()->user()->name],
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/resumes', [ResumeController::class, 'index'])->name('resumes.index');
+    Route::post('/resumes', [ResumeController::class, 'store'])->name('resumes.store');
+    Route::get('/resumes/{resume}', [ResumeController::class, 'show'])->name('resumes.show');
+    Route::patch('/resumes/{resume}', [ResumeController::class, 'update'])->name('resumes.update');
+    Route::delete('/resumes/{resume}', [ResumeController::class, 'destroy'])->name('resumes.destroy');
+    Route::post('/resumes/{resume}/default', [ResumeController::class, 'setDefault'])->name('resumes.default');
+    Route::post('/resumes/{resume}/retry', [ResumeController::class, 'retry'])->name('resumes.retry');
+
+    Route::resource('search-profiles', SearchProfileController::class)
+        ->parameters(['search-profiles' => 'profile'])
+        ->except(['show']);
+
+    Route::get('/feed/{profile}', [FeedController::class, 'show'])->name('feed.show');
+});
+
+Route::middleware(['auth', EnsureAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::resource('job-sources', JobSourceController::class)->except('show');
+        Route::post('job-sources/{job_source}/fetch-now', [JobSourceController::class, 'fetchNow'])->name('job-sources.fetch-now');
+    });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
