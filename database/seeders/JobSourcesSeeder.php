@@ -29,6 +29,8 @@ class JobSourcesSeeder extends Seeder
             ['source_type' => 'workable',   'identifier' => 'shopify',     'display_name' => 'Shopify (Workable)',  'config_json' => null],
             ['source_type' => 'ashby',      'identifier' => 'vercel',      'display_name' => 'Vercel (Ashby)',      'config_json' => null],
             ['source_type' => 'adzuna',     'identifier' => 'us',          'display_name' => 'Adzuna US',           'config_json' => ['country' => 'us']],
+            ['source_type' => 'remotive',  'identifier' => null, 'display_name' => 'Remotive',              'config_json' => null],
+            ['source_type' => 'usajobs',   'identifier' => null, 'display_name' => 'USAJobs (US Federal)',  'config_json' => null],
         ];
 
         foreach ($seeds as $seed) {
