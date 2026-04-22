@@ -1,10 +1,19 @@
 <?php
 
+use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\ErrorLogController;
+use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\JobController;
 use App\Http\Controllers\Admin\JobSourceController;
+use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Applications\ApplicationController;
 use App\Http\Controllers\Applications\ContactController;
 use App\Http\Controllers\Applications\DocumentController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\ImpersonationStopController;
 use App\Http\Controllers\Resumes\ResumeController;
 use App\Http\Controllers\SearchProfiles\SearchProfileController;
 use App\Http\Middleware\EnsureAdmin;
@@ -56,9 +65,35 @@ Route::middleware(['auth', EnsureAdmin::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        Route::get('/', [OverviewController::class, 'show'])->name('overview');
+
         Route::resource('job-sources', JobSourceController::class)->except('show');
         Route::post('job-sources/{job_source}/fetch-now', [JobSourceController::class, 'fetchNow'])->name('job-sources.fetch-now');
+
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+        Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
+
+        Route::post('impersonate/{user}/start', [ImpersonationController::class, 'start'])->name('impersonate.start');
+
+        Route::get('jobs', [JobController::class, 'index'])->name('jobs.index');
+        Route::get('jobs/{canonical_job}', [JobController::class, 'show'])->name('jobs.show');
+
+        Route::get('analytics', [AnalyticsController::class, 'show'])->name('analytics');
+
+        Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::patch('settings/{key}', [SettingController::class, 'update'])->name('settings.update');
+
+        Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
+
+        Route::get('errors', [ErrorLogController::class, 'show'])->name('errors');
+        Route::post('errors/resumes/{resume}/retry-parse', [ErrorLogController::class, 'retryResumeParse'])->name('errors.resume.retry-parse');
+        Route::post('errors/resumes/{resume}/retry-embed', [ErrorLogController::class, 'retryResumeEmbed'])->name('errors.resume.retry-embed');
+        Route::post('errors/jobs/{canonical_job}/retry-embed', [ErrorLogController::class, 'retryJobEmbed'])->name('errors.job.retry-embed');
+        Route::post('errors/matches/{match}/retry-rerank', [ErrorLogController::class, 'retryRerank'])->name('errors.match.retry-rerank');
     });
+
+Route::middleware('auth')->post('/impersonate/stop', ImpersonationStopController::class)->name('admin.impersonate.stop');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

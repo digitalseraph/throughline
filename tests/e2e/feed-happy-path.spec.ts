@@ -87,4 +87,10 @@ test('user can sign up, upload resume, create profile, and see ranked feed', asy
   // that contains the "Saved" label and assert at least one ApplicationCard link is visible.
   const savedColumn = page.locator('.w-56').filter({ hasText: 'Saved' }).first();
   await expect(savedColumn.locator('a').first()).toBeVisible();
+
+  // Admin smoke: promote the test user to admin via test-only route, then visit /admin.
+  await request.post('/testing/promote-by-email', { data: { email } });
+  await page.goto('/admin');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
 });

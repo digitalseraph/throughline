@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner.vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
 
@@ -12,6 +13,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
+    <ImpersonationBanner />
     <AppLayout :breadcrumbs="breadcrumbs">
         <slot />
     </AppLayout>

@@ -49,6 +49,7 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - `php artisan throughline:rerank-now {profile-id}` — synchronously rerank a profile's top-K stale matches
 - `php artisan throughline:reminder-scan-now` — run the application reminder scan synchronously (for dogfood debugging)
 - `php artisan tinker` — REPL in app context
+- Horizon is gated by `Gate::define('viewHorizon')` registered in `HorizonServiceProvider` — admins only.
 
 ## Architecture notes
 
@@ -70,6 +71,10 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - **Kanban** uses `vuedraggable`; each drop is a single PATCH to `/applications/{id}` with `{status: 'newstatus'}`.
 - **Reminder scan** (`ApplicationReminderScan`) runs daily at `site_settings.reminder_scan_hour_utc` (default 09:00 UTC). Writes a `reminder` event for overdue non-terminal applications once per day. Nav badge count is cached in Redis per user for `nav_reminder_badge_ttl_seconds` (default 60).
 - **Drivers (Plan 4)** — `RemotiveDriver` (single-feed aggregator) + `USAJobsDriver` (paginated + authenticated). Plan 2–4 complete the main product spec's 8-driver starter set: Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs.
+- **Admin dashboard** — `/admin` renders inside `AdminLayout`. All admin controllers extend `App\Http\Controllers\Admin\BaseController` which applies `EnsureAdmin` middleware and exposes `$this->audit()` for writing `admin_activity_log` rows. `admin_activity_log` is append-only (boot-time updating listener throws LogicException).
+- **Impersonation** is one-level only. `original_user_id` lives in the session; `ImpersonationBanner` renders whenever the key is set. `POST /impersonate/stop` takes the user back without requiring admin role (it's the impersonated user that clicks it).
+- **Analytics** — `App\Services\Admin\Analytics` returns Chart.js-ready arrays. No daily-aggregates table in v1; raw queries are fast enough for the seeded dataset.
+- **Horizon** mounted at `/horizon` gated by the `viewHorizon` Gate which checks `user->isAdmin()`. Registered in `HorizonServiceProvider::gate()`.
 
 ## Adding a new brand-facing string
 
@@ -77,6 +82,6 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 2. If it's a static default: put it in `config/brand.php`.
 3. Never inline a literal "Throughline" in a Vue template — the `NoHardcodedHostsTest` currently only guards hosts but a brand-string test should be added in a future plan.
 
-## What's here now (post Plan 4)
+## What's here now (post Plan 5)
 
-Resume upload with parse + embed, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching fan-out, stage-2 Claude rerank (`AiClient::rerank()`) producing fit score + narrative + rationale + gap chips, nightly rerank refresh (`NightlyRerankRefresh`), ranked feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, `throughline:rerank-now` artisan command, admin CRUD for job sources with fetch-now. Save-from-feed action writes an application with stage-2 snapshot, kanban UI with drag-and-drop status transitions, application detail with notes/contacts/documents/event timeline, daily reminder scan with nav-badge surfacing, `throughline:reminder-scan-now` artisan command. No analytics dashboard — that ships in Plan 5+.
+Resume upload with parse + embed, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching fan-out, stage-2 Claude rerank (`AiClient::rerank()`) producing fit score + narrative + rationale + gap chips, nightly rerank refresh (`NightlyRerankRefresh`), ranked feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, `throughline:rerank-now` artisan command, admin CRUD for job sources with fetch-now. Save-from-feed action writes an application with stage-2 snapshot, kanban UI with drag-and-drop status transitions, application detail with notes/contacts/documents/event timeline, daily reminder scan with nav-badge surfacing, `throughline:reminder-scan-now` artisan command. Admin dashboard (Overview / Users / Jobs / Analytics / Settings / Audit / Errors), one-level impersonation with audit trail, AI cost analytics, Horizon mount gated to admins.

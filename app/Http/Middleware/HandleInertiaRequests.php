@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Application;
+use App\Models\User;
 use App\Services\SiteSettings;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
@@ -59,6 +60,19 @@ class HandleInertiaRequests extends Middleware
                         ->count(),
                 )
                 : 0,
+            'impersonation' => function () use ($request) {
+                if (! $originalId = $request->session()->get('original_user_id')) {
+                    return null;
+                }
+                $current = $request->user();
+                $original = User::find($originalId);
+
+                return [
+                    'current_email' => $current?->email,
+                    'original_email' => $original?->email,
+                    'stop_url' => route('admin.impersonate.stop'),
+                ];
+            },
         ]);
     }
 }

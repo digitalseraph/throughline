@@ -64,7 +64,7 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
-The E2E spec drives the full happy path: register → upload resume → create search profile → seed jobs → recompute stage-1 matches → view ranked feed → apply stage-2 rerank → assert fit-score badge, narrative, and gap chips. It relies on `TestingServiceProvider` (fake `AiClient` returning deterministic vectors and canned rerank output) and test-only routes exposed only when `APP_ENV=testing`.
+The E2E spec drives the full happy path: register → upload resume → create search profile → seed jobs → recompute stage-1 matches → view ranked feed → apply stage-2 rerank → assert fit-score badge, narrative, and gap chips → promote user to admin → visit `/admin` and assert Overview heading. It relies on `TestingServiceProvider` (fake `AiClient` returning deterministic vectors and canned rerank output) and test-only routes exposed only when `APP_ENV=testing`.
 
 > **Windows note:** Playwright requires a Chromium binary and a display. In headless-only CI containers it should work fine; interactive Windows desktops may need the binary pre-installed via `npm run test:e2e:install`.
 
@@ -83,7 +83,7 @@ API against `stripe`'s public board. It is skipped by default (PR CI never runs 
 Enable it nightly by setting `THROUGHLINE_UPSTREAM_DRIFT_TEST=1` in the scheduled
 CI environment. Treat a failure as a signal that a driver needs updating.
 
-## What's here now (post Plan 4)
+## What's here now (post Plan 5)
 
 Resume upload + parse + embed, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching, stage-2 Claude rerank producing fit score + narrative + rationale + gap chips, nightly rerank refresh, feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, and the `throughline:rerank-now` artisan command.
 
@@ -95,4 +95,11 @@ Plan 4 additions:
 - Daily reminder scan with nav-badge surfacing (`throughline:reminder-scan-now`)
 - Remotive + USAJobs drivers complete the 8-driver starter set
 
-See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap. Plan 5 adds the admin dashboard.
+Plan 5 additions:
+
+- Admin dashboard (Overview / Users / Jobs / Analytics / Settings / Audit / Errors)
+- Impersonation (one-level) with full audit trail in `admin_activity_log`
+- AI cost analytics joining `ai_usage_events.context_id` to profile and user
+- Horizon mount at `/horizon` for queue monitoring, gated to admins
+
+See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap.
