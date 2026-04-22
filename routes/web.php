@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\JobController;
 use App\Http\Controllers\Admin\JobSourceController;
 use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Applications\ApplicationController;
 use App\Http\Controllers\Applications\ContactController;
@@ -77,6 +78,9 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::get('jobs/{canonical_job}', [JobController::class, 'show'])->name('jobs.show');
 
         Route::get('analytics', [AnalyticsController::class, 'show'])->name('analytics');
+
+        Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::patch('settings/{key}', [SettingController::class, 'update'])->name('settings.update');
     });
 
 Route::middleware('auth')->post('/impersonate/stop', ImpersonationStopController::class)->name('admin.impersonate.stop');
