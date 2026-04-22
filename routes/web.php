@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\JobController;
 use App\Http\Controllers\Admin\JobSourceController;
 use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\Admin\UserController;
@@ -70,6 +71,9 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
 
         Route::post('impersonate/{user}/start', [ImpersonationController::class, 'start'])->name('impersonate.start');
+
+        Route::get('jobs', [JobController::class, 'index'])->name('jobs.index');
+        Route::get('jobs/{canonical_job}', [JobController::class, 'show'])->name('jobs.show');
     });
 
 Route::middleware('auth')->post('/impersonate/stop', ImpersonationStopController::class)->name('admin.impersonate.stop');
