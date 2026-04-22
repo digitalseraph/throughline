@@ -63,6 +63,13 @@ return [
         'results_per_page' => env('ADZUNA_RESULTS_PER_PAGE', 50),
     ],
 
+    'usajobs' => [
+        'auth_key' => env('USAJOBS_AUTH_KEY'),
+        'user_agent_email' => env('USAJOBS_USER_AGENT_EMAIL'),
+        'max_pages' => env('USAJOBS_MAX_PAGES', 10),
+        'results_per_page' => env('USAJOBS_RESULTS_PER_PAGE', 25),
+    ],
+
     'ai' => [
         'embedding_dimensions' => 1536,
         // Approx cost per 1K tokens — used for ai_usage_events.estimated_cost_usd
