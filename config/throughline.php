@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Jobs\Drivers\AdzunaDriver;
 use App\Services\Jobs\Drivers\AshbyDriver;
 use App\Services\Jobs\Drivers\GreenhouseDriver;
 use App\Services\Jobs\Drivers\LeverDriver;
@@ -8,6 +9,7 @@ use App\Services\Jobs\Drivers\WorkableDriver;
 
 return [
     'drivers' => [
+        'adzuna' => AdzunaDriver::class,
         'ashby' => AshbyDriver::class,
         'greenhouse' => GreenhouseDriver::class,
         'lever' => LeverDriver::class,
