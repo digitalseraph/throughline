@@ -2,8 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Application;
+use App\Services\SiteSettings;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -45,6 +48,17 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'reminderBadgeCount' => fn () => $request->user()
+                ? Cache::remember(
+                    "reminder_badge:{$request->user()->id}",
+                    (int) app(SiteSettings::class)->get('nav_reminder_badge_ttl_seconds', '60'),
+                    fn () => Application::where('user_id', $request->user()->id)
+                        ->whereNotIn('status', Application::TERMINAL_STATUSES)
+                        ->whereNotNull('next_action_at')
+                        ->where('next_action_at', '<=', now())
+                        ->count(),
+                )
+                : 0,
         ]);
     }
 }
