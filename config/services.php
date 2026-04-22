@@ -47,4 +47,26 @@ return [
         'redirect' => env('APP_URL').'/auth/github/callback',
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'organization' => env('OPENAI_ORGANIZATION'),
+    ],
+
+    'anthropic' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+    ],
+
+    'ai' => [
+        'embedding_dimensions' => 1536,
+        // Approx cost per 1K tokens — used for ai_usage_events.estimated_cost_usd
+        'cost_per_1k_tokens' => [
+            'text-embedding-3-small' => ['input' => 0.00002, 'output' => 0.0],
+            'claude-sonnet-4-6' => ['input' => 0.003,   'output' => 0.015],
+        ],
+        'rate_limit' => [
+            'openai' => ['max' => 500, 'per_seconds' => 60],
+            'anthropic' => ['max' => 50, 'per_seconds' => 60],
+        ],
+    ],
+
 ];

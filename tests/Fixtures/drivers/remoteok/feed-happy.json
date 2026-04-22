@@ -1,0 +1,33 @@
+[
+  {"legal": "See remoteok.com/terms for usage rights."},
+  {
+    "id": "987654",
+    "slug": "acme-senior-backend-engineer-987654",
+    "company": "Acme",
+    "position": "Senior Backend Engineer",
+    "tags": ["backend", "python", "aws"],
+    "location": "Worldwide",
+    "salary_min": 120000,
+    "salary_max": 180000,
+    "apply_url": "https://remoteok.com/remote-jobs/987654-senior-backend-engineer-acme",
+    "url": "https://remoteok.com/remote-jobs/987654",
+    "description": "Build and maintain our core services...",
+    "date": "2026-04-15T10:00:00+00:00",
+    "company_logo": null
+  },
+  {
+    "id": "987655",
+    "slug": "beta-engineer-987655",
+    "company": "Beta",
+    "position": "Platform Engineer",
+    "tags": ["devops"],
+    "location": "Europe only",
+    "salary_min": null,
+    "salary_max": null,
+    "apply_url": "https://remoteok.com/remote-jobs/987655",
+    "url": "https://remoteok.com/remote-jobs/987655",
+    "description": "Help us scale...",
+    "date": "2026-04-16T08:00:00+00:00",
+    "company_logo": null
+  }
+]
