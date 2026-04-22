@@ -20,9 +20,14 @@ class DocumentController extends Controller
     public function store(StoreDocumentRequest $request, Application $application): RedirectResponse
     {
         $file = $request->file('file');
-        $path = $file->store('applications/'.$application->user_id.'/'.$application->id, 'local');
 
-        DB::transaction(function () use ($application, $file, $path, $request) {
+        // File storage is inside the transaction so that a failed DB insert does not
+        // produce an orphaned DB row with no backing file. The inverse edge case
+        // (file write succeeds, DB create fails) still orphans the file because
+        // Storage writes are not transactional — acceptable tradeoff for v1, matching
+        // the same pattern used by Plan 2 Task 5's resume upload.
+        DB::transaction(function () use ($application, $file, $request) {
+            $path = $file->store('applications/'.$application->user_id.'/'.$application->id, 'local');
             $doc = $application->documents()->create([
                 'kind' => $request->input('kind'),
                 'file_path' => $path,
