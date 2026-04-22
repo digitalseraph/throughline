@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { echo } from '@/echo';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { onMounted, onUnmounted } from 'vue';
 
 const props = defineProps<{
@@ -15,6 +16,9 @@ const props = defineProps<{
         created_at: string;
     };
 }>();
+
+const page = usePage();
+const userId = (page.props as any).auth?.user?.id;
 
 let pollHandle: number | undefined;
 
@@ -34,16 +38,31 @@ function startPolling(): void {
                 }
             },
         });
-    }, 3000);
+    }, 30000);
 }
 
 onMounted(() => {
+    if (userId) {
+        echo.private(`users.${userId}`)
+            .listen('.ResumeReady', (payload: { resume_id: number }) => {
+                if (payload.resume_id === props.resume.id) {
+                    router.reload({ only: ['resume'] });
+                }
+            })
+            .listen('.ResumeParseFailed', (payload: { resume_id: number }) => {
+                if (payload.resume_id === props.resume.id) {
+                    router.reload({ only: ['resume'] });
+                }
+            });
+    }
+    // keep the 30s fallback in case the WebSocket drops
     if (!isTerminalState()) {
         startPolling();
     }
 });
 
 onUnmounted(() => {
+    if (userId) echo.leave(`users.${userId}`);
     if (pollHandle) clearInterval(pollHandle);
 });
 

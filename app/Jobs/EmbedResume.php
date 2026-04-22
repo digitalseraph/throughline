@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\ResumeReady;
 use App\Models\Resume;
 use App\Services\Ai\AiClient;
 use App\Services\Ai\Exceptions\CostCeilingExceeded;
@@ -12,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EmbedResume implements ShouldQueue
 {
@@ -48,6 +50,12 @@ class EmbedResume implements ShouldQueue
             '['.implode(',', $vector).']',
             $resume->id,
         ]);
+
+        try {
+            event(new ResumeReady($resume->fresh()));
+        } catch (\Throwable $e) {
+            Log::warning('ResumeReady broadcast failed', ['resume_id' => $resume->id, 'error' => $e->getMessage()]);
+        }
 
         RecomputeStage1ForResume::dispatch($resume->id);
     }

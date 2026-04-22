@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\ResumeParseFailed;
 use App\Models\Resume;
 use App\Services\Ai\AiClient;
 use App\Services\Ai\Exceptions\ParseFailed;
@@ -10,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpWord\IOFactory as WordIO;
 use Spatie\PdfToText\Pdf as PdfToText;
@@ -38,6 +40,12 @@ class ParseResume implements ShouldQueue
             $resume->parse_status = 'parse_failed';
             $resume->save();
 
+            try {
+                event(new ResumeParseFailed($resume->fresh()));
+            } catch (\Throwable $broadcastException) {
+                Log::warning('ResumeParseFailed broadcast failed', ['resume_id' => $resume->id, 'error' => $broadcastException->getMessage()]);
+            }
+
             return;
         }
 
@@ -49,6 +57,12 @@ class ParseResume implements ShouldQueue
         } catch (ParseFailed $e) {
             $resume->parse_status = 'parse_failed';
             $resume->save();
+
+            try {
+                event(new ResumeParseFailed($resume->fresh()));
+            } catch (\Throwable $broadcastException) {
+                Log::warning('ResumeParseFailed broadcast failed', ['resume_id' => $resume->id, 'error' => $broadcastException->getMessage()]);
+            }
 
             return;
         }
