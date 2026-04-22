@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\JobSourceController;
 use App\Http\Controllers\Applications\ApplicationController;
+use App\Http\Controllers\Applications\ContactController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\Resumes\ResumeController;
 use App\Http\Controllers\SearchProfiles\SearchProfileController;
@@ -41,6 +42,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/feed/{profile}', [FeedController::class, 'show'])->name('feed.show');
 
     Route::resource('applications', ApplicationController::class)->except(['create', 'edit']);
+
+    Route::post('/applications/{application}/contacts', [ContactController::class, 'store'])->name('applications.contacts.store');
+    Route::patch('/applications/{application}/contacts/{contact}', [ContactController::class, 'update'])->name('applications.contacts.update');
+    Route::delete('/applications/{application}/contacts/{contact}', [ContactController::class, 'destroy'])->name('applications.contacts.destroy');
 });
 
 Route::middleware(['auth', EnsureAdmin::class])
