@@ -104,6 +104,26 @@ class AdzunaDriverTest extends TestCase
         iterator_to_array(app(AdzunaDriver::class)->fetch($source));
     }
 
+    public function test_currency_reflects_country_code(): void
+    {
+        $page1 = json_decode(file_get_contents(base_path('tests/Fixtures/drivers/adzuna/us-page1.json')), true);
+        $page2Empty = json_decode(file_get_contents(base_path('tests/Fixtures/drivers/adzuna/us-page2-empty.json')), true);
+
+        Http::fake([
+            'api.adzuna.com/*/search/1*' => Http::response($page1),
+            'api.adzuna.com/*/search/2*' => Http::response($page2Empty),
+        ]);
+
+        $source = JobSource::factory()->create([
+            'source_type' => 'adzuna',
+            'identifier' => 'gb',
+            'config_json' => ['country' => 'gb'],
+        ]);
+        $jobs = iterator_to_array(app(AdzunaDriver::class)->fetch($source));
+
+        $this->assertSame('GBP', $jobs[0]->compCurrency);
+    }
+
     public function test_http_failure_translates(): void
     {
         Http::fake(['api.adzuna.com/*' => Http::response('rate limit', 429)]);

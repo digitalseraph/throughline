@@ -71,6 +71,9 @@ class AdzunaDriver implements JobSourceDriver
         $isRemote = $locationRaw && stripos($locationRaw, 'remote') !== false;
         $remote = $isRemote ? 'remote_only' : 'onsite';
 
+        $country = $source->config_json['country'] ?? $source->identifier ?? 'us';
+        $currency = $this->currencyForCountry($country);
+
         return new CanonicalJobData(
             sourceId: (string) $raw['id'],
             sourceBoard: $source->identifier,
@@ -82,12 +85,33 @@ class AdzunaDriver implements JobSourceDriver
             remoteMode: $remote,
             compMin: isset($raw['salary_min']) && $raw['salary_min'] ? (int) $raw['salary_min'] : null,
             compMax: isset($raw['salary_max']) && $raw['salary_max'] ? (int) $raw['salary_max'] : null,
-            compCurrency: isset($raw['salary_min']) && $raw['salary_min'] ? 'USD' : null,
+            compCurrency: isset($raw['salary_min']) && $raw['salary_min'] ? $currency : null,
             seniority: null,
             employmentType: $raw['contract_type'] ?? null,
             applyUrl: $raw['redirect_url'] ?? '',
             postedAt: new DateTimeImmutable($raw['created'] ?? 'now'),
             rawPayload: $raw,
         );
+    }
+
+    protected function currencyForCountry(string $country): string
+    {
+        return match (strtolower($country)) {
+            'us' => 'USD',
+            'gb' => 'GBP',
+            'au' => 'AUD',
+            'ca' => 'CAD',
+            'de', 'fr', 'nl', 'it', 'es', 'at', 'be', 'ie' => 'EUR',
+            'pl' => 'PLN',
+            'in' => 'INR',
+            'nz' => 'NZD',
+            'za' => 'ZAR',
+            'sg' => 'SGD',
+            'ch' => 'CHF',
+            'mx' => 'MXN',
+            'br' => 'BRL',
+            'ru' => 'RUB',
+            default => 'USD',
+        };
     }
 }

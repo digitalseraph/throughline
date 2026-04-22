@@ -96,7 +96,8 @@ class RerankShortlist implements ShouldQueue
     {
         $now = now();
         foreach ($results as $r) {
-            JobMatch::where('canonical_job_id', $r['job_id'])
+            JobMatch::where('search_profile_id', $this->searchProfileId)
+                ->where('canonical_job_id', $r['job_id'])
                 ->update([
                     'stage2_score' => (int) $r['fit_score'],
                     'stage2_rationale' => (string) $r['rationale'],

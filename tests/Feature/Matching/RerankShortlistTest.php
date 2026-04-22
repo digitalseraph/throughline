@@ -120,6 +120,41 @@ class RerankShortlistTest extends TestCase
         }
     }
 
+    public function test_only_updates_matches_for_the_requesting_profile(): void
+    {
+        // Two users, same canonical job, each with their own job_matches row
+        $userA = User::factory()->create();
+        $userB = User::factory()->create();
+        $resumeA = Resume::factory()->for($userA)->parsed()->create();
+        $resumeB = Resume::factory()->for($userB)->parsed()->create();
+        $profileA = SearchProfile::factory()->for($userA)->create(['resume_id' => $resumeA->id]);
+        $profileB = SearchProfile::factory()->for($userB)->create(['resume_id' => $resumeB->id]);
+        $job = CanonicalJob::factory()->create();
+
+        $now = now();
+        JobMatch::insert([
+            ['user_id' => $userA->id, 'search_profile_id' => $profileA->id, 'canonical_job_id' => $job->id, 'stage1_score' => 0.8, 'stage2_score' => null, 'stage2_rationale' => null, 'stage2_gaps' => null, 'stage2_narrative' => null, 'stage2_at' => null, 'created_at' => $now],
+            ['user_id' => $userB->id, 'search_profile_id' => $profileB->id, 'canonical_job_id' => $job->id, 'stage1_score' => 0.7, 'stage2_score' => 50, 'stage2_rationale' => 'B-original', 'stage2_gaps' => '[]', 'stage2_narrative' => 'B-original', 'stage2_at' => $now, 'created_at' => $now],
+        ]);
+
+        $ai = Mockery::mock(AiClient::class);
+        $ai->shouldReceive('forUser')->andReturnSelf();
+        $ai->shouldReceive('rerank')->andReturn([
+            ['job_id' => $job->id, 'fit_score' => 90, 'rationale' => 'A-new', 'gaps' => [], 'narrative' => 'A-new'],
+        ]);
+        $this->app->instance(AiClient::class, $ai);
+
+        (new RerankShortlist($profileA->id, 20, $userA->id))->handle($ai);
+
+        $matchA = JobMatch::where('search_profile_id', $profileA->id)->first();
+        $this->assertSame(90, $matchA->stage2_score);
+        $this->assertSame('A-new', $matchA->stage2_rationale);
+
+        $matchB = JobMatch::where('search_profile_id', $profileB->id)->first();
+        $this->assertSame(50, $matchB->stage2_score, 'User B\'s match must not be touched by User A\'s rerank');
+        $this->assertSame('B-original', $matchB->stage2_rationale);
+    }
+
     public function test_releases_on_cost_ceiling(): void
     {
         $ctx = $this->seedProfileWithMatches(1, staleRange: 1);
