@@ -6,7 +6,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, ClipboardList, FileText, Folder, LayoutGrid, Search, Settings2 } from 'lucide-vue-next';
+import { BookOpen, ClipboardList, FileText, Folder, LayoutGrid, Search, ShieldCheck } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const page = usePage<SharedData>();
@@ -50,9 +50,9 @@ const footerNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
     {
-        title: 'Admin · Sources',
-        href: '/admin/job-sources',
-        icon: Settings2,
+        title: 'Admin',
+        href: '/admin',
+        icon: ShieldCheck,
     },
 ];
 </script>

@@ -4,6 +4,8 @@ use App\Jobs\RecomputeStage1ForResume;
 use App\Jobs\RerankShortlist;
 use App\Models\CanonicalJob;
 use App\Models\SearchProfile;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -46,6 +48,12 @@ Route::post('/testing/run-matching/{profileId}', function ($profileId) {
 Route::post('/testing/apply-rerank/{profileId}', function ($profileId) {
     $size = (int) request('size', 20);
     RerankShortlist::dispatchSync((int) $profileId, $size, null);
+
+    return response()->json(['ok' => true]);
+});
+
+Route::post('/testing/promote-by-email', function (Request $request) {
+    User::where('email', $request->input('email'))->update(['role' => 'admin']);
 
     return response()->json(['ok' => true]);
 });

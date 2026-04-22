@@ -9,7 +9,7 @@ class EnsureAdmin
 {
     public function handle(Request $request, Closure $next)
     {
-        if (! $request->user() || ! $request->user()->isAdmin()) {
+        if (! $request->user() || ! $request->user()->isAdmin() || $request->user()->isDeactivated()) {
             abort(403);
         }
 
