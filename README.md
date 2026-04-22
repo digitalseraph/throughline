@@ -68,6 +68,10 @@ The E2E spec drives the full happy path: register → upload resume → create s
 
 > **Windows note:** Playwright requires a Chromium binary and a display. In headless-only CI containers it should work fine; interactive Windows desktops may need the binary pre-installed via `npm run test:e2e:install`.
 
+## Production
+
+See [`docs/production-readiness.md`](docs/production-readiness.md) for the full checklist: required env vars, external services, background process setup, first-deploy steps, monitoring, security, backups, rollback procedure, and a post-deploy smoke test.
+
 ## Deployment portability
 
 No host strings are ever hardcoded. To move to a new domain:
