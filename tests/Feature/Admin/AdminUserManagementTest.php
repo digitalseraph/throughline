@@ -68,6 +68,22 @@ class AdminUserManagementTest extends TestCase
         $this->assertSame(1, AdminActivityLog::where('action', 'user.deactivated')->count());
     }
 
+    public function test_admin_cannot_modify_own_account(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.users.update', $admin), ['deactivate' => true])
+            ->assertStatus(422);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.users.update', $admin), ['role' => 'user'])
+            ->assertStatus(422);
+
+        $this->assertNull($admin->fresh()->deactivated_at);
+        $this->assertSame('admin', $admin->fresh()->role);
+    }
+
     public function test_non_admin_forbidden(): void
     {
         $user = User::factory()->create(['role' => 'user']);

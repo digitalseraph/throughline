@@ -52,6 +52,8 @@ class UserController extends BaseController
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        abort_if($user->id === auth()->id(), 422, 'Cannot modify your own account.');
+
         $data = $request->validate([
             'role' => ['sometimes', Rule::in(['user', 'admin'])],
             'deactivate' => ['sometimes', 'boolean'],
