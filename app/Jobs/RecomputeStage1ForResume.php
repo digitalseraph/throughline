@@ -33,33 +33,21 @@ class RecomputeStage1ForResume implements ShouldQueue
                 DB::transaction(function () use ($profile, $resumeEmbedding, $floor) {
                     DB::table('job_matches')->where('search_profile_id', $profile->id)->delete();
 
-                    (new HardFilterBuilder($profile))->toQuery()
+                    // Build a SELECT query from HardFilterBuilder, then insert-from-select.
+                    // This runs the cosine computation and floor filter inside the database,
+                    // eliminating the previous per-job round-trip for reading the embedding.
+                    $selectQuery = (new HardFilterBuilder($profile))->toQuery()
                         ->whereNotNull('embedding')
-                        ->chunkById(200, function ($jobs) use ($profile, $resumeEmbedding, $floor) {
-                            foreach ($jobs as $job) {
-                                $jobEmbedding = DB::table('canonical_jobs')->where('id', $job->id)->value('embedding');
-                                if (! $jobEmbedding) {
-                                    continue;
-                                }
+                        ->whereRaw('(1 - (embedding <=> ?::vector)) >= ?', [$resumeEmbedding, $floor])
+                        ->selectRaw(
+                            '? as user_id, ? as search_profile_id, id as canonical_job_id, (1 - (embedding <=> ?::vector))::float as stage1_score, NOW() as created_at',
+                            [$profile->user_id, $profile->id, $resumeEmbedding]
+                        );
 
-                                $similarity = DB::selectOne(
-                                    'SELECT 1 - (?::vector <=> ?::vector) AS s',
-                                    [$resumeEmbedding, $jobEmbedding],
-                                )->s;
-
-                                if ($similarity < $floor) {
-                                    continue;
-                                }
-
-                                DB::table('job_matches')->insert([
-                                    'user_id' => $profile->user_id,
-                                    'search_profile_id' => $profile->id,
-                                    'canonical_job_id' => $job->id,
-                                    'stage1_score' => $similarity,
-                                    'created_at' => now(),
-                                ]);
-                            }
-                        });
+                    DB::table('job_matches')->insertUsing(
+                        ['user_id', 'search_profile_id', 'canonical_job_id', 'stage1_score', 'created_at'],
+                        $selectQuery,
+                    );
                 });
             } catch (\Throwable $e) {
                 Log::warning('RecomputeStage1ForResume profile failure', [
