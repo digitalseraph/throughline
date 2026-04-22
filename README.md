@@ -25,7 +25,7 @@ docker compose up -d
 # Run migrations and seed data
 php artisan migrate --seed
 
-# Start the dev stack (PHP + queue listener + Vite)
+# Start the dev stack (PHP + queue listener + Vite + Reverb)
 composer run dev
 ```
 
@@ -68,6 +68,10 @@ The E2E spec drives the full happy path: register → upload resume → create s
 
 > **Windows note:** Playwright requires a Chromium binary and a display. In headless-only CI containers it should work fine; interactive Windows desktops may need the binary pre-installed via `npm run test:e2e:install`.
 
+## Production
+
+See [`docs/production-readiness.md`](docs/production-readiness.md) for the full checklist: required env vars, external services, background process setup, first-deploy steps, monitoring, security, backups, rollback procedure, and a post-deploy smoke test.
+
 ## Deployment portability
 
 No host strings are ever hardcoded. To move to a new domain:
@@ -83,23 +87,8 @@ API against `stripe`'s public board. It is skipped by default (PR CI never runs 
 Enable it nightly by setting `THROUGHLINE_UPSTREAM_DRIFT_TEST=1` in the scheduled
 CI environment. Treat a failure as a signal that a driver needs updating.
 
-## What's here now (post Plan 5)
+## v1 feature set
 
-Resume upload + parse + embed, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching, stage-2 Claude rerank producing fit score + narrative + rationale + gap chips, nightly rerank refresh, feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, and the `throughline:rerank-now` artisan command.
+Auth (email + Google + GitHub OAuth), multi-variant resumes with Claude parsing + OpenAI embedding, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching, stage-2 Claude rerank producing fit score + narrative + rationale + gap chips, nightly rerank refresh, ranked feed, application pipeline with kanban + contacts + documents + event timeline, daily reminder scan with nav-badge and email delivery, admin dashboard (Overview / Users + impersonation / Jobs / Analytics / Settings / Audit / Errors / Horizon), real-time updates via Reverb (`ResumeReady`, `ResumeParseFailed`, `ReminderBadgeUpdated`, `FeedMatchReranked`), settings-driven brand theming.
 
-Plan 4 additions:
-
-- Save-from-feed action writes an application with stage-2 snapshot preserved
-- Kanban UI with drag-and-drop status transitions (8-status state machine)
-- Application detail: notes, contacts, documents, event timeline
-- Daily reminder scan with nav-badge surfacing (`throughline:reminder-scan-now`)
-- Remotive + USAJobs drivers complete the 8-driver starter set
-
-Plan 5 additions:
-
-- Admin dashboard (Overview / Users / Jobs / Analytics / Settings / Audit / Errors)
-- Impersonation (one-level) with full audit trail in `admin_activity_log`
-- AI cost analytics joining `ai_usage_events.context_id` to profile and user
-- Horizon mount at `/horizon` for queue monitoring, gated to admins
-
-See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap.
+Six-plan arc complete. See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full build history.

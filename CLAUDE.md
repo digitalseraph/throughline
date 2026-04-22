@@ -75,13 +75,22 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - **Impersonation** is one-level only. `original_user_id` lives in the session; `ImpersonationBanner` renders whenever the key is set. `POST /impersonate/stop` takes the user back without requiring admin role (it's the impersonated user that clicks it).
 - **Analytics** — `App\Services\Admin\Analytics` returns Chart.js-ready arrays. No daily-aggregates table in v1; raw queries are fast enough for the seeded dataset.
 - **Horizon** mounted at `/horizon` gated by the `viewHorizon` Gate which checks `user->isAdmin()`. Registered in `HorizonServiceProvider::gate()`.
+- **Reverb real-time** — private `users.{id}` channels carry `ResumeReady`, `ResumeParseFailed`, `ReminderBadgeUpdated`, `FeedMatchReranked`. Every dispatch site wraps the event fire in try/catch so a failed push never aborts the primary DB write. Frontend subscriptions live in `resources/js/echo.ts` + page-level listeners.
+- **Settings-driven theming** — `BrandConfig` reads `site_settings.brand_*_override` first, falls back to `config/brand.php`. Admin Settings page groups the 5 theming keys in a dedicated "Theming" section.
+- **Email notifications** — `ApplicationReminderScan` dispatches `SendReminderEmail` per-user after writing reminder events. User opts out via the `notification_email_enabled` column on `users`.
+- **pgvector index retuning** — `php artisan throughline:rebuild-vector-index {table}` drops + recreates the ivfflat index with `ceil(sqrt(N))` as the `lists` heuristic.
+- **Brand-string leak guard** — `BrandStringLeakTest` fails if "Throughline" appears outside the allowlist (BrandConfig / config / tests / docs / mail templates).
 
 ## Adding a new brand-facing string
 
 1. If it's user-visible and admin-tunable: add a key to `SiteSettingsSeeder` and read via `SiteSettings::get()`.
 2. If it's a static default: put it in `config/brand.php`.
-3. Never inline a literal "Throughline" in a Vue template — the `NoHardcodedHostsTest` currently only guards hosts but a brand-string test should be added in a future plan.
+3. Never inline a literal "Throughline" in a Vue template — `BrandStringLeakTest` enforces this across .php, .vue, .blade.php, .ts, and .js files outside the allowlist.
 
-## What's here now (post Plan 5)
+## v1 feature set (Plans 1–6 complete)
 
-Resume upload with parse + embed, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching fan-out, stage-2 Claude rerank (`AiClient::rerank()`) producing fit score + narrative + rationale + gap chips, nightly rerank refresh (`NightlyRerankRefresh`), ranked feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, `throughline:rerank-now` artisan command, admin CRUD for job sources with fetch-now. Save-from-feed action writes an application with stage-2 snapshot, kanban UI with drag-and-drop status transitions, application detail with notes/contacts/documents/event timeline, daily reminder scan with nav-badge surfacing, `throughline:reminder-scan-now` artisan command. Admin dashboard (Overview / Users / Jobs / Analytics / Settings / Audit / Errors), one-level impersonation with audit trail, AI cost analytics, Horizon mount gated to admins.
+Auth (email + Google + GitHub OAuth), multi-variant resumes with Claude parsing + OpenAI embedding, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching fan-out, stage-2 Claude rerank (`AiClient::rerank()`) producing fit score + narrative + rationale + gap chips, nightly rerank refresh (`NightlyRerankRefresh`), ranked feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, `throughline:rerank-now` artisan command, admin CRUD for job sources with fetch-now. Save-from-feed action writes an application with stage-2 snapshot, kanban UI with drag-and-drop status transitions, application detail with notes/contacts/documents/event timeline, daily reminder scan with nav-badge surfacing and email delivery, `throughline:reminder-scan-now` artisan command. Admin dashboard (Overview / Users / Jobs / Analytics / Settings / Audit / Errors), one-level impersonation with audit trail, AI cost analytics, Horizon mount gated to admins. Real-time pushes via Reverb (`ResumeReady`, `ResumeParseFailed`, `ReminderBadgeUpdated`, `FeedMatchReranked`). Settings-driven brand theming. Brand-string leak guard and no-hardcoded-host guards in CI.
+
+## What's NOT here yet
+
+Plans 1–6 complete. No Plan 7 is currently scoped.

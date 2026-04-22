@@ -29,6 +29,11 @@ class SiteSettingsSeeder extends Seeder
             ['key' => 'anthropic_rerank_model',     'value' => 'claude-sonnet-4-6', 'type' => 'string', 'description' => 'Claude model used by AiClient::rerank.'],
             ['key' => 'reminder_scan_hour_utc',          'value' => '9',   'type' => 'int', 'description' => 'UTC hour for ApplicationReminderScan.'],
             ['key' => 'nav_reminder_badge_ttl_seconds',  'value' => '60',  'type' => 'int', 'description' => 'How long to cache the nav-bar reminder badge count per user.'],
+            ['key' => 'brand_wordmark_url_override',   'value' => '',     'type' => 'string', 'description' => 'URL to a custom SVG wordmark; overrides the default if set.'],
+            ['key' => 'brand_favicon_url_override',    'value' => '',     'type' => 'string', 'description' => 'URL to a custom favicon.'],
+            ['key' => 'brand_color_primary_override',  'value' => '',     'type' => 'string', 'description' => 'Hex color override for the ink token (e.g. #1a1410).'],
+            ['key' => 'brand_color_oxblood_override',  'value' => '',     'type' => 'string', 'description' => 'Hex color override for the oxblood accent.'],
+            ['key' => 'brand_font_sans_override',      'value' => '',     'type' => 'string', 'description' => 'CSS font-family for body text; overrides Inter.'],
         ];
 
         foreach ($defaults as $row) {

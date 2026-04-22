@@ -30,9 +30,10 @@ Route::get('/', function (BrandConfig $brand) {
     ]);
 })->name('home');
 
-Route::get('dashboard', function () {
+Route::get('dashboard', function (BrandConfig $brand) {
     return Inertia::render('Dashboard', [
         'user' => ['name' => auth()->user()->name],
+        'siteName' => $brand->name(),
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 

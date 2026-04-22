@@ -14,6 +14,7 @@
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.45",
+        "laravel/reverb": "^1.10",
         "laravel/socialite": "^5.26",
         "laravel/tinker": "^2.10.1",
         "openai-php/laravel": "^0.19.1",
@@ -61,7 +62,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"npm run dev\" \"/c/Users/david/.config/herd/bin/php84/php.exe artisan reverb:start\" --names=server,queue,logs,vite,reverb"
         ]
     },
     "extra": {

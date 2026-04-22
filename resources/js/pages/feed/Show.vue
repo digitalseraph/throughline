@@ -1,13 +1,33 @@
 <script setup lang="ts">
+import { echo } from '@/echo';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import JobMatchCard from '@/components/feed/JobMatchCard.vue';
+import { onMounted, onUnmounted } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   profile: { id: number; name: string; resume: { id: number; name: string } | null };
   matches: { data: any[]; links: any[]; meta?: any };
   showDebug: boolean;
 }>();
+
+const page = usePage();
+const userId = (page.props as any).auth?.user?.id;
+
+onMounted(() => {
+  if (userId) {
+    echo.private(`users.${userId}`)
+      .listen('.FeedMatchReranked', (event: { search_profile_id: number }) => {
+        if (event.search_profile_id === props.profile.id) {
+          router.reload({ only: ['matches'], preserveScroll: true });
+        }
+      });
+  }
+});
+
+onUnmounted(() => {
+  if (userId) echo.leave(`users.${userId}`);
+});
 </script>
 
 <template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 interface Setting {
     key: string;
@@ -27,6 +27,12 @@ const editValues = ref<Record<string, string>>(
 
 const saving = ref<Record<string, boolean>>({});
 const saved = ref<Record<string, boolean>>({});
+
+const grouped = computed(() => {
+    const theming = props.settings.filter((s) => s.key.startsWith('brand_'));
+    const general = props.settings.filter((s) => !s.key.startsWith('brand_'));
+    return { theming, general };
+});
 
 function save(key: string) {
     saving.value[key] = true;
@@ -55,7 +61,7 @@ function save(key: string) {
         <h1 class="font-display text-3xl text-ink">Settings</h1>
 
         <section class="mt-8">
-            <h2 class="mb-3 text-lg font-semibold text-ink">Site settings</h2>
+            <h2 class="mb-3 text-lg font-semibold text-ink">General</h2>
             <div class="overflow-hidden rounded border border-hairline">
                 <table class="w-full text-sm">
                     <thead class="bg-bone-2/60 text-xs uppercase text-ink-3">
@@ -68,7 +74,48 @@ function save(key: string) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-hairline">
-                        <tr v-for="setting in settings" :key="setting.key" class="bg-white hover:bg-bone-2/20">
+                        <tr v-for="setting in grouped.general" :key="setting.key" class="bg-white hover:bg-bone-2/20">
+                            <td class="px-4 py-2 font-mono text-xs text-ink-2">{{ setting.key }}</td>
+                            <td class="px-4 py-2">
+                                <input
+                                    v-model="editValues[setting.key]"
+                                    type="text"
+                                    class="w-full rounded border border-hairline px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
+                                />
+                            </td>
+                            <td class="px-4 py-2 text-xs text-ink-3">{{ setting.type }}</td>
+                            <td class="px-4 py-2 text-xs text-ink-3">{{ setting.description }}</td>
+                            <td class="px-4 py-2 text-right">
+                                <button
+                                    class="rounded bg-brand px-3 py-1 text-xs font-medium text-white hover:bg-brand/90 disabled:opacity-50"
+                                    :disabled="saving[setting.key]"
+                                    @click="save(setting.key)"
+                                >
+                                    {{ saving[setting.key] ? 'Saving…' : saved[setting.key] ? 'Saved' : 'Save' }}
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="mt-10">
+            <h2 class="mb-1 text-lg font-semibold text-ink">Theming</h2>
+            <p class="mb-3 text-xs text-ink-3">Leave blank to use the default. Restart required for some values (e.g. font-family).</p>
+            <div class="overflow-hidden rounded border border-hairline">
+                <table class="w-full text-sm">
+                    <thead class="bg-bone-2/60 text-xs uppercase text-ink-3">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Key</th>
+                            <th class="px-4 py-2 text-left">Value</th>
+                            <th class="px-4 py-2 text-left">Type</th>
+                            <th class="px-4 py-2 text-left">Description</th>
+                            <th class="px-4 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-hairline">
+                        <tr v-for="setting in grouped.theming" :key="setting.key" class="bg-white hover:bg-bone-2/20">
                             <td class="px-4 py-2 font-mono text-xs text-ink-2">{{ setting.key }}</td>
                             <td class="px-4 py-2">
                                 <input
