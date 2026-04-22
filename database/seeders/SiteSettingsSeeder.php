@@ -22,7 +22,11 @@ class SiteSettingsSeeder extends Seeder
             ['key' => 'brand_asset_overrides', 'value' => [], 'type' => 'json', 'description' => 'Optional per-install brand asset paths.'],
             ['key' => 'stage1_score_floor', 'value' => '0.2', 'type' => 'string', 'description' => 'Minimum cosine similarity for a job to enter the feed.'],
             ['key' => 'openai_embeddings_model', 'value' => 'text-embedding-3-small', 'type' => 'string', 'description' => 'OpenAI model used for both resume and job embeddings.'],
-            ['key' => 'anthropic_parse_model', 'value' => 'claude-sonnet-4-6', 'type' => 'string', 'description' => 'Anthropic model used by AiClient::parseResume.'],
+            ['key' => 'anthropic_parse_model',      'value' => 'claude-sonnet-4-6', 'type' => 'string', 'description' => 'Anthropic model used by AiClient::parseResume.'],
+            ['key' => 'rerank_max_batch_size',      'value' => '20',                'type' => 'int',    'description' => 'Maximum jobs per Claude rerank call.'],
+            ['key' => 'stage2_ttl_hours',           'value' => '24',                'type' => 'int',    'description' => 'Rerank staleness threshold in hours.'],
+            ['key' => 'nightly_rerank_hour_utc',    'value' => '4',                 'type' => 'int',    'description' => 'UTC hour for NightlyRerankRefresh.'],
+            ['key' => 'anthropic_rerank_model',     'value' => 'claude-sonnet-4-6', 'type' => 'string', 'description' => 'Claude model used by AiClient::rerank.'],
         ];
 
         foreach ($defaults as $row) {

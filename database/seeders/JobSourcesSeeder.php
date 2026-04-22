@@ -24,6 +24,11 @@ class JobSourcesSeeder extends Seeder
 
             // RemoteOK is a single aggregator.
             ['source_type' => 'remoteok',   'identifier' => null,          'display_name' => 'RemoteOK (all tags)'],
+
+            // Workable, Ashby, and Adzuna (Plan 3 drivers).
+            ['source_type' => 'workable',   'identifier' => 'shopify',     'display_name' => 'Shopify (Workable)',  'config_json' => null],
+            ['source_type' => 'ashby',      'identifier' => 'vercel',      'display_name' => 'Vercel (Ashby)',      'config_json' => null],
+            ['source_type' => 'adzuna',     'identifier' => 'us',          'display_name' => 'Adzuna US',           'config_json' => ['country' => 'us']],
         ];
 
         foreach ($seeds as $seed) {
