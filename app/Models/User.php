@@ -26,6 +26,7 @@ class User extends Authenticatable
         'role',
         'last_login_at',
         'deactivated_at',
+        'notification_email_enabled',
     ];
 
     /**
@@ -50,6 +51,7 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'deactivated_at' => 'datetime',
             'password' => 'hashed',
+            'notification_email_enabled' => 'boolean',
         ];
     }
 

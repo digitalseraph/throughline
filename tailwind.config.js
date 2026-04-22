@@ -23,7 +23,7 @@ export default {
                 sm: 'calc(var(--radius) - 4px)',
             },
             colors: {
-                // Throughline brand palette
+                // Brand palette
                 bone: '#fdfaf5',
                 'bone-2': '#f5ede0',
                 ink: '#1a1410',

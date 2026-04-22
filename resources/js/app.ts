@@ -1,5 +1,6 @@
 import '../css/app.css';
 
+import { echo } from '@/echo';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
@@ -35,6 +36,9 @@ createInertiaApp({
         color: '#4B5563',
     },
 });
+
+// Ensures Echo is initialized at boot.
+void echo;
 
 // This will set light / dark mode on page load...
 initializeTheme();

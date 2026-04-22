@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\FeedMatchReranked;
 use App\Models\JobMatch;
 use App\Models\SearchProfile;
 use App\Models\User;
@@ -90,6 +91,16 @@ class RerankShortlist implements ShouldQueue
         }
 
         $this->applyResults($results);
+
+        try {
+            $userId = $this->actingUserId ?? $profile->user_id;
+            FeedMatchReranked::dispatch($userId, $this->searchProfileId);
+        } catch (\Throwable $e) {
+            Log::warning('FeedMatchReranked dispatch failed', [
+                'profile_id' => $this->searchProfileId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     protected function applyResults(array $results): void
