@@ -28,6 +28,7 @@ class ContactController extends Controller
 
     public function update(UpdateContactRequest $request, Application $application, ApplicationContact $contact): RedirectResponse
     {
+        abort_unless((int) $application->user_id === $request->user()->id, 403);
         abort_unless($contact->application_id === $application->id, 404);
 
         $contact->update($request->validated());

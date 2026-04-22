@@ -5,6 +5,7 @@ namespace Tests\Feature\Applications;
 use App\Models\Application;
 use App\Models\ApplicationDocument;
 use App\Models\User;
+use App\Services\Applications\EventWriter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -54,6 +55,33 @@ class ApplicationDocumentTest extends TestCase
         $this->actingAs($user)
             ->post(route('applications.documents.store', $app), ['kind' => 'cover_letter', 'file' => $file])
             ->assertSessionHasErrors('file');
+    }
+
+    public function test_transaction_rollback_does_not_orphan_file_in_db(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $app = Application::factory()->for($user)->create();
+        $file = UploadedFile::fake()->create('cover.pdf', 50, 'application/pdf');
+
+        // Simulate a transaction failure by mocking EventWriter to throw AFTER the
+        // documents()->create() would have run. Use partial mock on EventWriter.
+        $this->mock(EventWriter::class, function ($mock) {
+            $mock->shouldReceive('logDocumentAttached')->andThrow(new \RuntimeException('simulated'));
+        });
+
+        try {
+            $this->actingAs($user)->post(route('applications.documents.store', $app), [
+                'kind' => 'cover_letter',
+                'file' => $file,
+            ]);
+        } catch (\RuntimeException $e) {
+            // expected
+        }
+
+        // No DB row should exist — transaction rolled back
+        $this->assertSame(0, $app->documents()->count());
+        $this->assertSame(0, $app->events()->where('type', 'document_attached')->count());
     }
 
     public function test_stranger_forbidden(): void
