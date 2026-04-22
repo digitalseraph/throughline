@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Ai\Exceptions\CostCeilingExceeded;
 use App\Services\Ai\Exceptions\ParseFailed;
 use App\Services\Ai\Exceptions\ProviderRateLimited;
+use App\Services\Ai\Exceptions\RerankFailed;
 use App\Services\SiteSettings;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -93,6 +94,86 @@ class AiClient
         $this->recordUsage('anthropic', $model, 'parse', $inputTokens, $outputTokens, 'resume');
 
         return $parsed;
+    }
+
+    public function rerank(string $resumeText, array $jobs): array
+    {
+        if (empty($jobs)) {
+            return [];
+        }
+
+        $maxBatch = (int) ($this->settings->get('rerank_max_batch_size') ?? config('services.ai.rerank_max_batch_size', 20));
+        $batches = array_chunk($jobs, $maxBatch);
+
+        $allResults = [];
+        foreach ($batches as $batch) {
+            $batchResults = $this->rerankBatch($resumeText, $batch);
+            $allResults = array_merge($allResults, $batchResults);
+        }
+
+        return $allResults;
+    }
+
+    protected function rerankBatch(string $resumeText, array $jobs): array
+    {
+        $this->enforceCostCeiling();
+        $this->consumeRateBucket('anthropic');
+
+        $model = $this->settings->get('anthropic_rerank_model', 'claude-sonnet-4-6');
+
+        $system = 'You rerank job postings against a candidate resume. Return ONLY compact JSON matching {"matches": [{"job_id": <int>, "fit_score": <int 0-100>, "rationale": "<2-4 sentences>", "gaps": [{"requirement": "<string>", "severity": "blocker"|"stretch"|"minor"}], "narrative": "<one-sentence framing of how this fits the candidate arc>"}]}. Include exactly one entry per input job. Never omit a job.';
+
+        $userContent = "Candidate resume:\n---\n{$resumeText}\n---\n\nJob postings to rerank:\n".
+            json_encode(array_map(
+                fn ($j) => ['id' => $j['id'], 'title' => $j['title'], 'company' => $j['company'], 'description' => mb_substr($j['description'], 0, 2000)],
+                $jobs,
+            ));
+
+        $response = Http::withHeaders([
+            'x-api-key' => config('services.anthropic.api_key'),
+            'anthropic-version' => '2023-06-01',
+        ])->acceptJson()->asJson()->post('https://api.anthropic.com/v1/messages', [
+            'model' => $model,
+            'max_tokens' => 4096,
+            'system' => $system,
+            'messages' => [['role' => 'user', 'content' => $userContent]],
+        ]);
+
+        if ($response->status() === 429) {
+            throw new ProviderRateLimited('anthropic', (int) ($response->header('retry-after') ?: 30));
+        }
+
+        $response->throw();
+
+        $data = $response->json();
+        $raw = $data['content'][0]['text'] ?? '';
+        $parsed = json_decode($raw, true);
+
+        if (! is_array($parsed) || ! isset($parsed['matches']) || ! is_array($parsed['matches'])) {
+            throw new RerankFailed('response did not contain matches array', $raw);
+        }
+
+        $byId = [];
+        foreach ($parsed['matches'] as $match) {
+            if (! isset($match['job_id'], $match['fit_score'], $match['rationale'], $match['gaps'], $match['narrative'])) {
+                throw new RerankFailed('match entry missing required fields', $raw);
+            }
+            $byId[(int) $match['job_id']] = $match;
+        }
+
+        $ordered = [];
+        foreach ($jobs as $job) {
+            if (! isset($byId[$job['id']])) {
+                throw new RerankFailed("missing response for job_id {$job['id']}", $raw);
+            }
+            $ordered[] = $byId[$job['id']];
+        }
+
+        $inputTokens = (int) ($data['usage']['input_tokens'] ?? 0);
+        $outputTokens = (int) ($data['usage']['output_tokens'] ?? 0);
+        $this->recordUsage('anthropic', $model, 'rerank', $inputTokens, $outputTokens, 'rerank_batch');
+
+        return $ordered;
     }
 
     /**
