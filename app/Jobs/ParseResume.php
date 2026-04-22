@@ -66,7 +66,7 @@ class ParseResume implements ShouldQueue
         $diskPath = Storage::disk('local')->path($resume->source_file_path);
 
         return match ($resume->source_mime) {
-            'application/pdf' => PdfToText::getText($diskPath),
+            'application/pdf' => PdfToText::getText($diskPath, config('services.pdftotext.binary')),
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => $this->extractDocx($diskPath),
             default => file_get_contents($diskPath) ?: '',
         };

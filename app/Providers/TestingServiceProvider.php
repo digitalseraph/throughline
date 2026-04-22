@@ -9,9 +9,11 @@ class TestingServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Only bind the fake when serving for Playwright E2E (APP_ENV=testing but NOT
-        // running PHPUnit). PHPUnit tests mock the HTTP layer directly via Http::fake().
-        if (! app()->environment('testing') || app()->runningUnitTests()) {
+        // Only bind the fake when serving for Playwright E2E (APP_ENV=testing and
+        // PLAYWRIGHT_E2E=true). PHPUnit tests mock the HTTP layer directly via Http::fake()
+        // and must NOT get this fake, so we gate on the explicit flag rather than
+        // runningUnitTests() which always returns true when APP_ENV=testing.
+        if (! app()->environment('testing') || ! env('PLAYWRIGHT_E2E')) {
             return;
         }
 
@@ -33,7 +35,7 @@ class TestingServiceProvider extends ServiceProvider
                     ];
                 }
 
-                public function rerank(string $resumeText, array $jobs): array
+                public function rerank(string $resumeText, array $jobs, ?int $searchProfileId = null): array
                 {
                     return array_map(fn ($j) => [
                         'job_id' => $j['id'],
