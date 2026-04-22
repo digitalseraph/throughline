@@ -96,7 +96,7 @@ class AiClient
         return $parsed;
     }
 
-    public function rerank(string $resumeText, array $jobs): array
+    public function rerank(string $resumeText, array $jobs, ?int $searchProfileId = null): array
     {
         if (empty($jobs)) {
             return [];
@@ -107,14 +107,14 @@ class AiClient
 
         $allResults = [];
         foreach ($batches as $batch) {
-            $batchResults = $this->rerankBatch($resumeText, $batch);
+            $batchResults = $this->rerankBatch($resumeText, $batch, $searchProfileId);
             $allResults = array_merge($allResults, $batchResults);
         }
 
         return $allResults;
     }
 
-    protected function rerankBatch(string $resumeText, array $jobs): array
+    protected function rerankBatch(string $resumeText, array $jobs, ?int $searchProfileId = null): array
     {
         $this->enforceCostCeiling();
         $this->consumeRateBucket('anthropic');
@@ -125,7 +125,12 @@ class AiClient
 
         $userContent = "Candidate resume:\n---\n{$resumeText}\n---\n\nJob postings to rerank:\n".
             json_encode(array_map(
-                fn ($j) => ['id' => $j['id'], 'title' => $j['title'], 'company' => $j['company'], 'description' => mb_substr($j['description'], 0, 2000)],
+                fn ($j) => [
+                    'id' => (int) ($j['id'] ?? 0),
+                    'title' => (string) ($j['title'] ?? ''),
+                    'company' => (string) ($j['company'] ?? ''),
+                    'description' => mb_substr((string) ($j['description'] ?? ''), 0, 2000),
+                ],
                 $jobs,
             ));
 
@@ -171,7 +176,7 @@ class AiClient
 
         $inputTokens = (int) ($data['usage']['input_tokens'] ?? 0);
         $outputTokens = (int) ($data['usage']['output_tokens'] ?? 0);
-        $this->recordUsage('anthropic', $model, 'rerank', $inputTokens, $outputTokens, 'rerank_batch');
+        $this->recordUsage('anthropic', $model, 'rerank', $inputTokens, $outputTokens, 'rerank_batch', $searchProfileId !== null ? (string) $searchProfileId : null);
 
         return $ordered;
     }
@@ -226,6 +231,7 @@ class AiClient
         int $inputTokens,
         int $outputTokens,
         ?string $contextType,
+        ?string $contextId = null,
     ): void {
         $rates = config("services.ai.cost_per_1k_tokens.{$model}", ['input' => 0, 'output' => 0]);
         $cost = ($inputTokens / 1000) * $rates['input'] + ($outputTokens / 1000) * $rates['output'];
@@ -239,7 +245,7 @@ class AiClient
             'output_tokens' => $outputTokens,
             'estimated_cost_usd' => $cost,
             'context_type' => $contextType,
-            'context_id' => null,
+            'context_id' => $contextId,
             'created_at' => now(),
         ]);
     }

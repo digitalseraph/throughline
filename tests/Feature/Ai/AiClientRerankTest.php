@@ -126,6 +126,27 @@ class AiClientRerankTest extends TestCase
         ]);
     }
 
+    public function test_context_id_is_populated_with_search_profile_id(): void
+    {
+        Http::fake([
+            'api.anthropic.com/*' => Http::response($this->claudeRerankResponse([
+                ['job_id' => 1, 'fit_score' => 80, 'rationale' => 'R', 'gaps' => [], 'narrative' => 'N'],
+            ])),
+        ]);
+
+        $user = User::factory()->create();
+        app(AiClient::class)->forUser($user)->rerank('resume', [
+            ['id' => 1, 'title' => 'X', 'company' => 'Y', 'description' => 'Z'],
+        ], searchProfileId: 42);
+
+        $this->assertDatabaseHas('ai_usage_events', [
+            'user_id' => $user->id,
+            'operation' => 'rerank',
+            'context_type' => 'rerank_batch',
+            'context_id' => '42',
+        ]);
+    }
+
     public function test_rate_limit_translates(): void
     {
         Http::fake([
