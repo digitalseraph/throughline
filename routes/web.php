@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\JobController;
 use App\Http\Controllers\Admin\JobSourceController;
@@ -74,6 +75,8 @@ Route::middleware(['auth', EnsureAdmin::class])
 
         Route::get('jobs', [JobController::class, 'index'])->name('jobs.index');
         Route::get('jobs/{canonical_job}', [JobController::class, 'show'])->name('jobs.show');
+
+        Route::get('analytics', [AnalyticsController::class, 'show'])->name('analytics');
     });
 
 Route::middleware('auth')->post('/impersonate/stop', ImpersonationStopController::class)->name('admin.impersonate.stop');
