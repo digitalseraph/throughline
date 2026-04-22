@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Applications;
 
+use App\Events\ReminderBadgeUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Applications\StoreApplicationRequest;
 use App\Models\Application;
@@ -11,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -100,7 +102,9 @@ class ApplicationController extends Controller
             'next_action_at' => ['nullable', 'date'],
         ]);
 
-        DB::transaction(function () use ($request, $application) {
+        $shouldFireBadge = false;
+
+        DB::transaction(function () use ($request, $application, &$shouldFireBadge) {
             $oldStatus = $application->status;
             $newStatus = $request->input('status');
             $newNotes = $request->input('notes');
@@ -134,7 +138,34 @@ class ApplicationController extends Controller
             if ($newNotes !== null && $newNotes !== '') {
                 $this->events->logNote($application, $newNotes);
             }
+
+            $statusTransitionedTerminal = $newStatus !== null && $newStatus !== $oldStatus
+                && (in_array($newStatus, Application::TERMINAL_STATUSES) || in_array($oldStatus, Application::TERMINAL_STATUSES));
+
+            $nextActionChanged = array_key_exists('next_action_at', $request->all());
+
+            if ($statusTransitionedTerminal || $nextActionChanged) {
+                $shouldFireBadge = true;
+            }
         });
+
+        if ($shouldFireBadge) {
+            try {
+                $userId = $application->user_id;
+                $count = Application::where('user_id', $userId)
+                    ->whereNotIn('status', Application::TERMINAL_STATUSES)
+                    ->whereNotNull('next_action_at')
+                    ->where('next_action_at', '<=', now())
+                    ->count();
+
+                ReminderBadgeUpdated::dispatch($userId, $count);
+            } catch (\Throwable $e) {
+                Log::warning('ReminderBadgeUpdated broadcast failed in update', [
+                    'application_id' => $application->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return redirect()->back()->with('status', 'Application updated.');
     }
@@ -148,6 +179,22 @@ class ApplicationController extends Controller
             $application->update(['status' => 'withdrawn']);
             $this->events->logStatusChange($application, $old, 'withdrawn');
         });
+
+        try {
+            $userId = $application->user_id;
+            $count = Application::where('user_id', $userId)
+                ->whereNotIn('status', Application::TERMINAL_STATUSES)
+                ->whereNotNull('next_action_at')
+                ->where('next_action_at', '<=', now())
+                ->count();
+
+            ReminderBadgeUpdated::dispatch($userId, $count);
+        } catch (\Throwable $e) {
+            Log::warning('ReminderBadgeUpdated broadcast failed in destroy', [
+                'application_id' => $application->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()->route('applications.index')->with('status', 'Application withdrawn.');
     }
