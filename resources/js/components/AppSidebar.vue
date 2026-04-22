@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, FileText, Search, Settings2 } from 'lucide-vue-next';
+import { BookOpen, ClipboardList, Folder, LayoutGrid, FileText, Search, Settings2 } from 'lucide-vue-next';
 import Wordmark from '@/components/brand/Wordmark.vue';
 import { computed } from 'vue';
 
@@ -27,6 +27,11 @@ const mainNavItems: NavItem[] = [
         title: 'Search profiles',
         href: '/search-profiles',
         icon: Search,
+    },
+    {
+        title: 'Applications',
+        href: '/applications',
+        icon: ClipboardList,
     },
 ];
 

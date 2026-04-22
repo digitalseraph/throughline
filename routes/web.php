@@ -40,7 +40,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/feed/{profile}', [FeedController::class, 'show'])->name('feed.show');
 
-    Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
+    Route::resource('applications', ApplicationController::class)->except(['create', 'edit']);
 });
 
 Route::middleware(['auth', EnsureAdmin::class])
