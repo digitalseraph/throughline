@@ -46,6 +46,7 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - `npm run test:e2e` — run Playwright E2E smoke against the testing environment
 - `npm run test:e2e:install` — install Playwright browser binaries (run once)
 - `vendor/bin/pint --dirty` — format only changed files
+- `php artisan throughline:rerank-now {profile-id}` — synchronously rerank a profile's top-K stale matches
 - `php artisan tinker` — REPL in app context
 
 ## Architecture notes
@@ -58,7 +59,11 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - **First-user-to-admin** — `RegisteredUserController::store()` sets `role = User::count() === 0 ? 'admin' : 'user'`. The `SocialiteController` callback does the same when creating a user via OAuth.
 - **No hardcoded host strings** — enforced by `tests/Feature/Brand/NoHardcodedHostsTest.php` (brand hosts) and `tests/Feature/Brand/DriverHostsTest.php` (driver upstream hosts). Both tests will fail CI if forbidden strings leak. Use `config('app.url')` or Ziggy-generated route helpers.
 - **OAuth** — Google and GitHub only. Redirect URIs constructed from `APP_URL` at runtime. Routes in `routes/auth.php`: `auth.social.redirect` (guest-only) and `auth.social.callback` (not gated by guest so it can be used for account linking).
-- **Test-only routes** — `routes/testing.php` is conditionally loaded by `bootstrap/app.php` when `APP_ENV=testing`. It exposes `POST /testing/seed-jobs` and `POST /testing/run-matching/{profileId}` for Playwright E2E use. These routes are never present in production.
+- **Test-only routes** — `routes/testing.php` is conditionally loaded by `bootstrap/app.php` when `APP_ENV=testing`. It exposes `POST /testing/seed-jobs`, `POST /testing/run-matching/{profileId}`, and `POST /testing/apply-rerank/{profileId}` for Playwright E2E use. These routes are never present in production.
+- **Stage-2 rerank** — `AiClient::rerank()` produces fit score + rationale + gaps + narrative via Claude Sonnet with all-or-throw semantics. `RerankShortlist` is the only writer to `job_matches.stage2_*` columns and is dispatchable sync (feed controller) or async (nightly refresh). Failures write a `'rerank unavailable'` sentinel so the stale-row query doesn't loop.
+- **Nightly rerank** — `NightlyRerankRefresh` runs at the UTC hour set by `site_settings.nightly_rerank_hour_utc` (default 04:00) and reranks the top-50 per active profile with a linked resume.
+- **Feed ordering** — `FeedController` orders by `stage2_score DESC NULLS LAST, stage1_score DESC` so fresh-reranked matches rise above never-reranked ones. `?raw=1` bypasses rerank entirely for debugging.
+- **Drivers (Plan 3)** — `WorkableDriver` + `AshbyDriver` extend the ATS shape from Plan 2. `AdzunaDriver` introduces the paginated-aggregator shape; credentials required via `ADZUNA_APP_ID` + `ADZUNA_APP_KEY`.
 
 ## Adding a new brand-facing string
 
@@ -66,6 +71,6 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 2. If it's a static default: put it in `config/brand.php`.
 3. Never inline a literal "Throughline" in a Vue template — the `NoHardcodedHostsTest` currently only guards hosts but a brand-string test should be added in a future plan.
 
-## What's here now (post Plan 2)
+## What's here now (post Plan 3)
 
-Resume upload with parse + embed, search-profile CRUD, three job-source drivers (Greenhouse, Lever, RemoteOK), stage-1 cosine matching fan-out, ranked feed with Plan-3 card shell (rationale slot shows a placeholder), admin CRUD for job sources with fetch-now. No stage-2 rerank, no application tracking, no analytics — those ship in Plan 3–6.
+Resume upload with parse + embed, search-profile CRUD, six job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna), stage-1 cosine matching fan-out, stage-2 Claude rerank (`AiClient::rerank()`) producing fit score + narrative + rationale + gap chips, nightly rerank refresh (`NightlyRerankRefresh`), ranked feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, `throughline:rerank-now` artisan command, admin CRUD for job sources with fetch-now. No application tracking, no analytics — those ship in Plan 4+.

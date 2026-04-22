@@ -1,0 +1,19 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "job_01HABCDEF",
+      "title": "Remote Platform Engineer",
+      "departmentName": "Platform",
+      "employmentType": "FullTime",
+      "locationName": "Remote",
+      "isListed": true,
+      "isRemote": true,
+      "publishedAt": "2026-04-15T10:00:00.000Z",
+      "jobUrl": "https://jobs.ashbyhq.com/vercel/xyz",
+      "descriptionPlain": "Fully remote role on the platform team.",
+      "descriptionHtml": "<p>Fully remote...</p>",
+      "compensation": null
+    }
+  ]
+}

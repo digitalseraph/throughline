@@ -18,6 +18,7 @@ class JobSource extends Model
         'last_fetched_at',
         'last_error',
         'consecutive_failures',
+        'config_json',
     ];
 
     protected $casts = [
@@ -25,5 +26,6 @@ class JobSource extends Model
         'last_fetched_at' => 'datetime',
         'fetch_cadence_minutes' => 'integer',
         'consecutive_failures' => 'integer',
+        'config_json' => 'array',
     ];
 }
