@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 
 class SendReminderEmail implements ShouldQueue
@@ -21,7 +22,7 @@ class SendReminderEmail implements ShouldQueue
     public function handle(): void
     {
         $user = User::find($this->userId);
-        if (!$user || !$user->notification_email_enabled) {
+        if (! $user || ! $user->notification_email_enabled) {
             return;
         }
 
@@ -33,6 +34,12 @@ class SendReminderEmail implements ShouldQueue
             return;
         }
 
+        $dedupeKey = sprintf('reminder_email_sent:%d:%s', $user->id, now()->toDateString());
+        if (Cache::has($dedupeKey)) {
+            return; // Already sent today — skip.
+        }
+
         Mail::send(new ReminderDueMail($user, $stillDue));
+        Cache::put($dedupeKey, true, now()->addDay());
     }
 }

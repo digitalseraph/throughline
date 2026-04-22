@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Models\CanonicalJob;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -71,6 +72,20 @@ class SendReminderEmailTest extends TestCase
         Mail::fake();
 
         (new SendReminderEmail(99999, [1, 2, 3]))->handle();
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_skips_when_already_sent_today(): void
+    {
+        Mail::fake();
+        $user = User::factory()->create(['notification_email_enabled' => true]);
+        $app = Application::factory()->for($user)->create(['status' => 'applied', 'next_action_at' => now()->subDay()]);
+
+        // Pre-set the dedupe key as if an earlier send already happened today.
+        Cache::put("reminder_email_sent:{$user->id}:".now()->toDateString(), true, now()->addDay());
+
+        (new SendReminderEmail($user->id, [$app->id]))->handle();
 
         Mail::assertNothingSent();
     }

@@ -36,6 +36,10 @@ onUnmounted(() => {
         channel.stopListening('.ReminderBadgeUpdated');
         channel = null;
     }
+    const authId = (page.props.auth as { user?: { id?: number } })?.user?.id;
+    if (authId) {
+        echo.leave(`users.${authId}`);
+    }
 });
 </script>
 

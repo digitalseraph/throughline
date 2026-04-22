@@ -3,7 +3,7 @@
 <ul>
 @foreach($applications as $app)
   <li>
-    <strong>{{ $app->canonicalJob->title }}</strong> at {{ $app->canonicalJob->company_name }}
+    <strong>{{ $app->canonicalJob?->title ?? '(job removed)' }}</strong> at {{ $app->canonicalJob?->company_name ?? '—' }}
     — <a href="{{ route('applications.show', $app) }}">Review</a>
   </li>
 @endforeach
