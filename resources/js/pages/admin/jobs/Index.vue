@@ -106,9 +106,8 @@ function applyFilters() {
           :href="link.url"
           class="rounded border border-hairline px-2 py-1 text-xs"
           :class="link.active ? 'bg-ink text-bone' : 'text-ink-2 hover:text-ink'"
-          v-html="link.label"
-        />
-        <span v-else class="rounded border border-hairline px-2 py-1 text-xs text-ink-3" v-html="link.label" />
+        ><span v-html="link.label" /></Link>
+        <span v-else class="rounded border border-hairline px-2 py-1 text-xs text-ink-3"><span v-html="link.label" /></span>
       </template>
     </div>
   </AdminLayout>
