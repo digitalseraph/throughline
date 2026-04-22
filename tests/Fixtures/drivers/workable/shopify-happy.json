@@ -1,0 +1,33 @@
+{
+  "jobs": [
+    {
+      "id": "ABC-123-XYZ",
+      "title": "Senior Platform Engineer",
+      "full_title": "Senior Platform Engineer (Shopify)",
+      "shortcode": "ABC123",
+      "code": null,
+      "state": "published",
+      "department": "Engineering",
+      "url": "https://apply.workable.com/shopify/j/ABC123/",
+      "application_url": "https://apply.workable.com/shopify/j/ABC123/apply/",
+      "shortlink": "https://apply.workable.com/shopify/j/ABC123/",
+      "location": {
+        "country": "Canada",
+        "countryCode": "CA",
+        "region": "Ontario",
+        "city": "Toronto",
+        "zipCode": null,
+        "telecommuting": false
+      },
+      "created_at": "2026-04-15T14:00:00Z",
+      "updated_at": "2026-04-15T14:00:00Z",
+      "description": "<p>We're looking for a senior engineer...</p>",
+      "requirements": "<p>5+ years...</p>",
+      "benefits": "<p>Competitive compensation...</p>",
+      "employment_type": "Full-time",
+      "industry": "Technology",
+      "function": "Engineering",
+      "experience": "Senior"
+    }
+  ]
+}
