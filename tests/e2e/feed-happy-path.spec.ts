@@ -44,4 +44,20 @@ test('user can sign up, upload resume, create profile, and see ranked feed', asy
   await page.goto(`/feed/${profileId}`);
   await expect(page.locator('article').first()).toBeVisible();
   await expect(page.getByText(/ai rationale pending/i).first()).toBeVisible();
+
+  // Now force a rerank so stage-2 output lands.
+  await request.post(`/testing/apply-rerank/${profileId}`);
+
+  // Refresh and confirm stage-2 renders.
+  await page.reload();
+  await expect(page.locator('article').first()).toBeVisible();
+
+  // Fit score badge is now visible somewhere on the first card.
+  await expect(page.locator('article').first().getByText('75', { exact: false })).toBeVisible();
+
+  // Narrative subtitle is rendered (contains the fake text).
+  await expect(page.getByText(/Fake career-arc narrative/i).first()).toBeVisible();
+
+  // At least one gap chip.
+  await expect(page.getByText('Example requirement').first()).toBeVisible();
 });
