@@ -1,0 +1,32 @@
+{
+    "0-legal-notice": "This data is provided for non-commercial use only.",
+    "job-count": 2,
+    "jobs": [
+        {
+            "id": 112233,
+            "url": "https://remotive.com/remote-jobs/software-dev/senior-backend-engineer-112233",
+            "title": "Senior Backend Engineer",
+            "company_name": "Acme",
+            "category": "Software Development",
+            "tags": ["php", "laravel", "postgres"],
+            "job_type": "full_time",
+            "publication_date": "2026-04-15T10:00:00+00:00",
+            "candidate_required_location": "Worldwide",
+            "salary": "$120,000 - $180,000",
+            "description": "<p>We are looking for a Senior Backend Engineer.</p>"
+        },
+        {
+            "id": 112234,
+            "url": "https://remotive.com/remote-jobs/software-dev/frontend-developer-112234",
+            "title": "Frontend Developer",
+            "company_name": "Globex",
+            "category": "Software Development",
+            "tags": ["vue", "typescript"],
+            "job_type": "full_time",
+            "publication_date": "2026-04-16T08:00:00+00:00",
+            "candidate_required_location": "USA Only",
+            "salary": "",
+            "description": "<p>We are looking for a Frontend Developer.</p>"
+        }
+    ]
+}

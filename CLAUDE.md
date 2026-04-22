@@ -47,6 +47,7 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - `npm run test:e2e:install` — install Playwright browser binaries (run once)
 - `vendor/bin/pint --dirty` — format only changed files
 - `php artisan throughline:rerank-now {profile-id}` — synchronously rerank a profile's top-K stale matches
+- `php artisan throughline:reminder-scan-now` — run the application reminder scan synchronously (for dogfood debugging)
 - `php artisan tinker` — REPL in app context
 
 ## Architecture notes
@@ -64,6 +65,11 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - **Nightly rerank** — `NightlyRerankRefresh` runs at the UTC hour set by `site_settings.nightly_rerank_hour_utc` (default 04:00) and reranks the top-50 per active profile with a linked resume.
 - **Feed ordering** — `FeedController` orders by `stage2_score DESC NULLS LAST, stage1_score DESC` so fresh-reranked matches rise above never-reranked ones. `?raw=1` bypasses rerank entirely for debugging.
 - **Drivers (Plan 3)** — `WorkableDriver` + `AshbyDriver` extend the ATS shape from Plan 2. `AdzunaDriver` introduces the paginated-aggregator shape; credentials required via `ADZUNA_APP_ID` + `ADZUNA_APP_KEY`.
+- **Application pipeline** — `applications` table with 8-status state machine; `application_events` is append-only (the model's `booted()` updating-listener throws LogicException). `EventWriter` service is the only writer — call `$eventWriter->logStatusChange()` or equivalent from inside a DB transaction.
+- **Save-from-feed** preserves the stage-2 rerank output at save-time into `applications.stage2_snapshot`, so later reranks can't retcon user history.
+- **Kanban** uses `vuedraggable`; each drop is a single PATCH to `/applications/{id}` with `{status: 'newstatus'}`.
+- **Reminder scan** (`ApplicationReminderScan`) runs daily at `site_settings.reminder_scan_hour_utc` (default 09:00 UTC). Writes a `reminder` event for overdue non-terminal applications once per day. Nav badge count is cached in Redis per user for `nav_reminder_badge_ttl_seconds` (default 60).
+- **Drivers (Plan 4)** — `RemotiveDriver` (single-feed aggregator) + `USAJobsDriver` (paginated + authenticated). Plan 2–4 complete the main product spec's 8-driver starter set: Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs.
 
 ## Adding a new brand-facing string
 
@@ -71,6 +77,6 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 2. If it's a static default: put it in `config/brand.php`.
 3. Never inline a literal "Throughline" in a Vue template — the `NoHardcodedHostsTest` currently only guards hosts but a brand-string test should be added in a future plan.
 
-## What's here now (post Plan 3)
+## What's here now (post Plan 4)
 
-Resume upload with parse + embed, search-profile CRUD, six job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna), stage-1 cosine matching fan-out, stage-2 Claude rerank (`AiClient::rerank()`) producing fit score + narrative + rationale + gap chips, nightly rerank refresh (`NightlyRerankRefresh`), ranked feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, `throughline:rerank-now` artisan command, admin CRUD for job sources with fetch-now. No application tracking, no analytics — those ship in Plan 4+.
+Resume upload with parse + embed, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching fan-out, stage-2 Claude rerank (`AiClient::rerank()`) producing fit score + narrative + rationale + gap chips, nightly rerank refresh (`NightlyRerankRefresh`), ranked feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, `throughline:rerank-now` artisan command, admin CRUD for job sources with fetch-now. Save-from-feed action writes an application with stage-2 snapshot, kanban UI with drag-and-drop status transitions, application detail with notes/contacts/documents/event timeline, daily reminder scan with nav-badge surfacing, `throughline:reminder-scan-now` artisan command. No analytics dashboard — that ships in Plan 5+.

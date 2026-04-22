@@ -7,7 +7,7 @@ test('user can sign up, upload resume, create profile, and see ranked feed', asy
   await page.goto('/register');
   await page.getByLabel('Name').fill('E2E User');
   await page.getByLabel('Email address').fill(email);
-  await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm password').fill(password);
   await page.getByRole('button', { name: /register|create account/i }).click();
   await expect(page).toHaveURL(/dashboard|\//);
@@ -60,4 +60,16 @@ test('user can sign up, upload resume, create profile, and see ranked feed', asy
 
   // At least one gap chip.
   await expect(page.getByText('Example requirement').first()).toBeVisible();
+
+  // Save the first card.
+  await page.locator('article').first().getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('article').first().getByText('Saved')).toBeVisible({ timeout: 5000 });
+
+  // Navigate to applications and confirm the saved job shows in the saved column.
+  await page.goto('/applications');
+  await expect(page.getByText('Applications')).toBeVisible();
+
+  // The saved column should contain exactly one ApplicationCard matching the job we saved.
+  const savedColumn = page.locator('div:has(> header:has(h2:text("Saved"))) ul').first();
+  await expect(savedColumn.locator('a').first()).toBeVisible();
 });

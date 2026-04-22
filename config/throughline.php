@@ -5,6 +5,8 @@ use App\Services\Jobs\Drivers\AshbyDriver;
 use App\Services\Jobs\Drivers\GreenhouseDriver;
 use App\Services\Jobs\Drivers\LeverDriver;
 use App\Services\Jobs\Drivers\RemoteOkDriver;
+use App\Services\Jobs\Drivers\RemotiveDriver;
+use App\Services\Jobs\Drivers\USAJobsDriver;
 use App\Services\Jobs\Drivers\WorkableDriver;
 
 return [
@@ -14,6 +16,8 @@ return [
         'greenhouse' => GreenhouseDriver::class,
         'lever' => LeverDriver::class,
         'remoteok' => RemoteOkDriver::class,
+        'remotive' => RemotiveDriver::class,
+        'usajobs' => USAJobsDriver::class,
         'workable' => WorkableDriver::class,
     ],
 ];

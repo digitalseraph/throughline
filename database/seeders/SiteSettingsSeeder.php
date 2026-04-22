@@ -27,6 +27,8 @@ class SiteSettingsSeeder extends Seeder
             ['key' => 'stage2_ttl_hours',           'value' => '24',                'type' => 'int',    'description' => 'Rerank staleness threshold in hours.'],
             ['key' => 'nightly_rerank_hour_utc',    'value' => '4',                 'type' => 'int',    'description' => 'UTC hour for NightlyRerankRefresh.'],
             ['key' => 'anthropic_rerank_model',     'value' => 'claude-sonnet-4-6', 'type' => 'string', 'description' => 'Claude model used by AiClient::rerank.'],
+            ['key' => 'reminder_scan_hour_utc',          'value' => '9',   'type' => 'int', 'description' => 'UTC hour for ApplicationReminderScan.'],
+            ['key' => 'nav_reminder_badge_ttl_seconds',  'value' => '60',  'type' => 'int', 'description' => 'How long to cache the nav-bar reminder badge count per user.'],
         ];
 
         foreach ($defaults as $row) {

@@ -1,0 +1,45 @@
+{
+  "LanguageCode": "EN",
+  "SearchResult": {
+    "SearchResultCount": 2,
+    "SearchResultCountAll": 2,
+    "SearchResultItems": [
+      {
+        "MatchedObjectId": "834219200",
+        "MatchedObjectDescriptor": {
+          "PositionID": "LS-FH-25-12345-01",
+          "PositionTitle": "Cybersecurity Specialist",
+          "PositionURI": "https://www.usajobs.gov/job/834219200",
+          "ApplyURI": ["https://www.usajobs.gov/job/834219200/apply"],
+          "PositionLocationDisplay": "Washington, District of Columbia, US",
+          "PositionLocation": [{"LocationName": "Washington, District of Columbia, US"}],
+          "OrganizationName": "U.S. Cyber Command",
+          "PositionRemuneration": [{"MinimumRange": "112015", "MaximumRange": "145617", "RateIntervalCode": "PA", "Description": "Per Year"}],
+          "PositionStartDate": "2026-04-15",
+          "PositionEndDate": "2026-04-30",
+          "PublicationStartDate": "2026-04-15T00:00:00.000",
+          "QualificationSummary": "Must hold an active TS/SCI clearance...",
+          "UserArea": {"Details": {"JobSummary": "Defend critical DoD networks..."}}
+        }
+      },
+      {
+        "MatchedObjectId": "834219201",
+        "MatchedObjectDescriptor": {
+          "PositionID": "NH-FH-25-67890-02",
+          "PositionTitle": "Software Developer",
+          "PositionURI": "https://www.usajobs.gov/job/834219201",
+          "ApplyURI": ["https://www.usajobs.gov/job/834219201/apply"],
+          "PositionLocationDisplay": "Remote",
+          "PositionLocation": [{"LocationName": "Remote"}],
+          "OrganizationName": "Department of Veterans Affairs",
+          "PositionRemuneration": [],
+          "PositionStartDate": "2026-04-16",
+          "PositionEndDate": "2026-05-01",
+          "PublicationStartDate": "2026-04-16T00:00:00.000",
+          "QualificationSummary": "",
+          "UserArea": {"Details": {"JobSummary": "Remote full-stack development..."}}
+        }
+      }
+    ]
+  }
+}

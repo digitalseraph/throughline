@@ -83,8 +83,16 @@ API against `stripe`'s public board. It is skipped by default (PR CI never runs 
 Enable it nightly by setting `THROUGHLINE_UPSTREAM_DRIFT_TEST=1` in the scheduled
 CI environment. Treat a failure as a signal that a driver needs updating.
 
-## What's here now (post Plan 3)
+## What's here now (post Plan 4)
 
-Resume upload + parse + embed, search-profile CRUD, six job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna), stage-1 cosine matching, stage-2 Claude rerank producing fit score + narrative + rationale + gap chips, nightly rerank refresh, feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, and the `throughline:rerank-now` artisan command.
+Resume upload + parse + embed, search-profile CRUD, eight job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), stage-1 cosine matching, stage-2 Claude rerank producing fit score + narrative + rationale + gap chips, nightly rerank refresh, feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, and the `throughline:rerank-now` artisan command.
 
-See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap. Plan 4 adds application tracking.
+Plan 4 additions:
+
+- Save-from-feed action writes an application with stage-2 snapshot preserved
+- Kanban UI with drag-and-drop status transitions (8-status state machine)
+- Application detail: notes, contacts, documents, event timeline
+- Daily reminder scan with nav-badge surfacing (`throughline:reminder-scan-now`)
+- Remotive + USAJobs drivers complete the 8-driver starter set
+
+See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap. Plan 5 adds the admin dashboard.
