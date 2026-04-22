@@ -28,7 +28,7 @@ interface ApplicationDetail {
     resume: { id: number; name: string } | null;
     events: ApplicationEvent[];
     contacts: Array<{ id: number; name: string; role: string; email: string | null; linkedin_url: string | null; notes: string | null }>;
-    documents: Array<{ id: number; kind: string; label: string }>;
+    documents: Array<{ id: number; kind: string; file_name: string; size_bytes: number }>;
 }
 
 const props = defineProps<{
@@ -76,6 +76,20 @@ function addContact() {
 function removeContact(contactId: number) {
     if (window.confirm('Remove this contact?')) {
         router.delete(route('applications.contacts.destroy', [props.application.id, contactId]));
+    }
+}
+
+const docForm = useForm<{ kind: string; file: File | null }>({ kind: 'cover_letter', file: null });
+function uploadDoc() {
+    if (!docForm.file) return;
+    docForm.post(route('applications.documents.store', props.application.id), {
+        forceFormData: true,
+        onSuccess: () => docForm.reset(),
+    });
+}
+function removeDoc(docId: number) {
+    if (window.confirm('Remove this document?')) {
+        router.delete(route('applications.documents.destroy', [props.application.id, docId]));
     }
 }
 
@@ -189,6 +203,30 @@ function eventLabel(event: ApplicationEvent): string {
                         <input v-model="contactForm.email" type="email" placeholder="Email (optional)" class="rounded border border-hairline bg-bone-2 px-3 py-2 text-sm" />
                     </div>
                     <button type="submit" class="rounded-full bg-oxblood px-4 py-1 text-sm font-medium text-bone" :disabled="contactForm.processing">Add contact</button>
+                </form>
+            </section>
+
+            <!-- Documents -->
+            <section class="mt-8">
+                <h2 class="font-display text-xl text-ink">Documents</h2>
+                <ul v-if="application.documents.length" class="mt-3 space-y-2">
+                    <li v-for="doc in application.documents" :key="doc.id" class="flex items-center justify-between rounded border border-hairline bg-bone-2/50 px-4 py-2 text-sm">
+                        <div>
+                            <p class="font-medium text-ink">{{ doc.file_name }}</p>
+                            <p class="text-xs text-ink-3">{{ doc.kind }} · {{ Math.round(doc.size_bytes / 1024) }} KB</p>
+                        </div>
+                        <button type="button" class="text-xs text-ink-3 hover:text-oxblood" @click="removeDoc(doc.id)">Remove</button>
+                    </li>
+                </ul>
+                <form class="mt-3 flex items-center gap-2" @submit.prevent="uploadDoc">
+                    <select v-model="docForm.kind" class="rounded border border-hairline bg-bone-2 px-3 py-2 text-sm">
+                        <option value="cover_letter">Cover letter</option>
+                        <option value="resume_snapshot">Resume snapshot</option>
+                        <option value="portfolio">Portfolio</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <input type="file" class="text-sm" @change="(e: any) => docForm.file = e.target.files[0]" />
+                    <button type="submit" class="rounded-full bg-oxblood px-4 py-1 text-sm font-medium text-bone" :disabled="docForm.processing">Upload</button>
                 </form>
             </section>
 
