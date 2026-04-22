@@ -16,6 +16,7 @@ class Application extends Model
     public const TERMINAL_STATUSES = ['offer', 'rejected', 'withdrawn'];
 
     protected $fillable = [
+        'user_id',
         'canonical_job_id',
         'search_profile_id',
         'resume_id',

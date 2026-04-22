@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\JobSourceController;
+use App\Http\Controllers\Applications\ApplicationController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\Resumes\ResumeController;
 use App\Http\Controllers\SearchProfiles\SearchProfileController;
@@ -38,6 +39,8 @@ Route::middleware('auth')->group(function () {
         ->except(['show']);
 
     Route::get('/feed/{profile}', [FeedController::class, 'show'])->name('feed.show');
+
+    Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
 });
 
 Route::middleware(['auth', EnsureAdmin::class])

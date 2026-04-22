@@ -47,6 +47,11 @@ class FeedController extends Controller
 
         $profile->load('resume:id,name');
 
+        $savedJobIds = DB::table('applications')
+            ->where('user_id', $request->user()->id)
+            ->pluck('canonical_job_id')
+            ->flip();
+
         $query = DB::table('job_matches')
             ->join('canonical_jobs', 'job_matches.canonical_job_id', '=', 'canonical_jobs.id')
             ->where('job_matches.search_profile_id', $profile->id)
@@ -89,6 +94,7 @@ class FeedController extends Controller
             'stage2_gaps' => $row->stage2_gaps ? json_decode($row->stage2_gaps, true) : null,
             'stage2_narrative' => $row->stage2_narrative,
             'stage2_at' => $row->stage2_at,
+            'is_saved' => $savedJobIds->has($row->job_id),
             'job' => [
                 'id' => $row->job_id,
                 'title' => $row->title,
