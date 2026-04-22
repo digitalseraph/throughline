@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\JobSourceController;
+use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\Applications\ApplicationController;
 use App\Http\Controllers\Applications\ContactController;
 use App\Http\Controllers\Applications\DocumentController;
@@ -56,6 +57,8 @@ Route::middleware(['auth', EnsureAdmin::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        Route::get('/', [OverviewController::class, 'show'])->name('overview');
+
         Route::resource('job-sources', JobSourceController::class)->except('show');
         Route::post('job-sources/{job_source}/fetch-now', [JobSourceController::class, 'fetchNow'])->name('job-sources.fetch-now');
     });
