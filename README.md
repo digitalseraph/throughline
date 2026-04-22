@@ -76,6 +76,13 @@ No host strings are ever hardcoded. To move to a new domain:
 2. Add the new host to the Google + GitHub OAuth consoles.
 3. Deploy — no code changes needed.
 
+### Nightly upstream drift test
+
+`tests/Feature/Jobs/JobSourcesUpstreamDriftTest.php` hits the real Greenhouse
+API against `stripe`'s public board. It is skipped by default (PR CI never runs it).
+Enable it nightly by setting `THROUGHLINE_UPSTREAM_DRIFT_TEST=1` in the scheduled
+CI environment. Treat a failure as a signal that a driver needs updating.
+
 ## Status
 
 Plan 2 complete. See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap. Plan 3 adds stage-2 reranking and rationale generation.
