@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 
-const props = defineProps<{
+defineProps<{
     application: {
         id: number;
         title: string;
@@ -20,12 +20,10 @@ function truncate(str: string, len = 40): string {
 <template>
     <Link
         :href="route('applications.show', application.id)"
-        class="block rounded-lg border border-hairline bg-white px-4 py-3 hover:border-oxblood/40 hover:bg-bone-2 transition-colors"
+        class="block rounded-lg border border-hairline bg-white px-4 py-3 transition-colors hover:border-oxblood/40 hover:bg-bone-2"
     >
         <p class="truncate text-sm font-medium text-ink" :title="application.title">{{ truncate(application.title) }}</p>
-        <p class="truncate text-xs text-ink-3 mt-0.5" :title="application.company">{{ truncate(application.company, 32) }}</p>
-        <p v-if="application.next_action_at" class="mt-1.5 text-xs text-ink-2">
-            Next: {{ application.next_action_at }}
-        </p>
+        <p class="mt-0.5 truncate text-xs text-ink-3" :title="application.company">{{ truncate(application.company, 32) }}</p>
+        <p v-if="application.next_action_at" class="mt-1.5 text-xs text-ink-2">Next: {{ application.next_action_at }}</p>
     </Link>
 </template>
