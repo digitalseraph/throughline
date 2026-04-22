@@ -7,7 +7,7 @@ test('user can sign up, upload resume, create profile, and see ranked feed', asy
   await page.goto('/register');
   await page.getByLabel('Name').fill('E2E User');
   await page.getByLabel('Email address').fill(email);
-  await page.getByLabel('Password').fill(password);
+  await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm password').fill(password);
   await page.getByRole('button', { name: /register|create account/i }).click();
   await expect(page).toHaveURL(/dashboard|\//);
