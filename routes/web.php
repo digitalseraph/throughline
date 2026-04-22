@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\JobSourceController;
 use App\Http\Controllers\Admin\OverviewController;
 use App\Http\Controllers\Admin\UserController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Applications\ApplicationController;
 use App\Http\Controllers\Applications\ContactController;
 use App\Http\Controllers\Applications\DocumentController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\ImpersonationStopController;
 use App\Http\Controllers\Resumes\ResumeController;
 use App\Http\Controllers\SearchProfiles\SearchProfileController;
 use App\Http\Middleware\EnsureAdmin;
@@ -66,7 +68,11 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
+
+        Route::post('impersonate/{user}/start', [ImpersonationController::class, 'start'])->name('impersonate.start');
     });
+
+Route::middleware('auth')->post('/impersonate/stop', ImpersonationStopController::class)->name('admin.impersonate.stop');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
