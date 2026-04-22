@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\JobController;
 use App\Http\Controllers\Admin\JobSourceController;
@@ -84,6 +85,12 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::patch('settings/{key}', [SettingController::class, 'update'])->name('settings.update');
 
         Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
+
+        Route::get('errors', [ErrorLogController::class, 'show'])->name('errors');
+        Route::post('errors/resumes/{resume}/retry-parse', [ErrorLogController::class, 'retryResumeParse'])->name('errors.resume.retry-parse');
+        Route::post('errors/resumes/{resume}/retry-embed', [ErrorLogController::class, 'retryResumeEmbed'])->name('errors.resume.retry-embed');
+        Route::post('errors/jobs/{canonical_job}/retry-embed', [ErrorLogController::class, 'retryJobEmbed'])->name('errors.job.retry-embed');
+        Route::post('errors/matches/{match}/retry-rerank', [ErrorLogController::class, 'retryRerank'])->name('errors.match.retry-rerank');
     });
 
 Route::middleware('auth')->post('/impersonate/stop', ImpersonationStopController::class)->name('admin.impersonate.stop');
