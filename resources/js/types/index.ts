@@ -20,6 +20,7 @@ export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    reminderBadgeCount: number;
     ziggy: {
         location: string;
         url: string;

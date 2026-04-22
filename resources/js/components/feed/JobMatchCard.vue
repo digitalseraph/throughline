@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import RationaleSlot from './RationaleSlot.vue';
+import { router } from '@inertiajs/vue3';
 
-defineProps<{
+const props = defineProps<{
     match: {
         match_id: number;
         stage1_score: number;
@@ -10,6 +11,7 @@ defineProps<{
         stage2_gaps: Array<{ requirement: string; severity: 'blocker' | 'stretch' | 'minor' }> | null;
         stage2_narrative: string | null;
         stage2_at: string | null;
+        is_saved: boolean;
         job: {
             id: number;
             title: string;
@@ -52,6 +54,13 @@ function fitScoreClass(score: number | null) {
     if (score >= 60) return 'bg-oxblood/15 text-oxblood';
     return 'bg-bone-2 text-ink-3';
 }
+
+function save() {
+    router.post(route('applications.store'), { job_match_id: props.match.match_id }, {
+        preserveScroll: true,
+        onSuccess: () => router.reload({ only: ['matches'] }),
+    });
+}
 </script>
 
 <template>
@@ -65,6 +74,20 @@ function fitScoreClass(score: number | null) {
                         :class="['rounded-full px-2.5 py-0.5 text-xs font-medium tracking-tight', fitScoreClass(match.stage2_score)]"
                     >
                         {{ match.stage2_score }}
+                    </span>
+                    <button
+                        v-if="!match.is_saved"
+                        type="button"
+                        class="rounded-full border border-ink-3 px-3 py-0.5 text-xs hover:border-oxblood hover:text-oxblood"
+                        @click="save"
+                    >
+                        Save
+                    </button>
+                    <span
+                        v-else
+                        class="rounded-full border border-oxblood bg-oxblood/10 px-3 py-0.5 text-xs text-oxblood"
+                    >
+                        Saved
                     </span>
                 </div>
                 <p class="mt-1 text-sm text-ink-2">
