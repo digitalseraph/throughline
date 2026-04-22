@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\ApplicationReminderScan;
 use App\Jobs\CloseStaleJobs;
 use App\Jobs\FetchJobSource;
 use App\Jobs\NightlyRerankRefresh;
@@ -30,3 +31,10 @@ Schedule::call(function () {
         NightlyRerankRefresh::dispatch();
     }
 })->everyMinute()->name('throughline-nightly-rerank-gate')->withoutOverlapping();
+
+Schedule::call(function () {
+    $hour = (int) app(SiteSettings::class)->get('reminder_scan_hour_utc', '9');
+    if (now()->utc()->hour === $hour && now()->utc()->minute === 0) {
+        ApplicationReminderScan::dispatch();
+    }
+})->everyMinute()->name('throughline-reminder-scan-gate')->withoutOverlapping();

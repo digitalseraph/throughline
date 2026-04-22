@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import Wordmark from '@/components/brand/Wordmark.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, ClipboardList, Folder, LayoutGrid, FileText, Search, Settings2 } from 'lucide-vue-next';
-import Wordmark from '@/components/brand/Wordmark.vue';
+import { BookOpen, ClipboardList, FileText, Folder, LayoutGrid, Search, Settings2 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const page = usePage<SharedData>();
