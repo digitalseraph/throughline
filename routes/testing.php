@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\RecomputeStage1ForResume;
+use App\Jobs\RerankShortlist;
 use App\Models\CanonicalJob;
 use App\Models\SearchProfile;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,13 @@ Route::post('/testing/run-matching/{profileId}', function ($profileId) {
     RecomputeStage1ForResume::dispatchSync(
         SearchProfile::findOrFail($profileId)->resume_id
     );
+
+    return response()->json(['ok' => true]);
+});
+
+Route::post('/testing/apply-rerank/{profileId}', function ($profileId) {
+    $size = (int) request('size', 20);
+    RerankShortlist::dispatchSync((int) $profileId, $size, null);
 
     return response()->json(['ok' => true]);
 });

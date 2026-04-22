@@ -56,6 +56,13 @@ return [
         'api_key' => env('ANTHROPIC_API_KEY'),
     ],
 
+    'adzuna' => [
+        'app_id' => env('ADZUNA_APP_ID'),
+        'app_key' => env('ADZUNA_APP_KEY'),
+        'max_pages' => env('ADZUNA_MAX_PAGES', 20),
+        'results_per_page' => env('ADZUNA_RESULTS_PER_PAGE', 50),
+    ],
+
     'ai' => [
         'embedding_dimensions' => 1536,
         // Approx cost per 1K tokens — used for ai_usage_events.estimated_cost_usd

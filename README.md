@@ -64,7 +64,7 @@ npm run test:e2e:install
 npm run test:e2e
 ```
 
-The E2E spec drives the full happy path: register → upload resume → create search profile → seed jobs → recompute stage-1 matches → view ranked feed. It relies on `TestingServiceProvider` (fake `AiClient` returning deterministic vectors) and test-only routes exposed only when `APP_ENV=testing`.
+The E2E spec drives the full happy path: register → upload resume → create search profile → seed jobs → recompute stage-1 matches → view ranked feed → apply stage-2 rerank → assert fit-score badge, narrative, and gap chips. It relies on `TestingServiceProvider` (fake `AiClient` returning deterministic vectors and canned rerank output) and test-only routes exposed only when `APP_ENV=testing`.
 
 > **Windows note:** Playwright requires a Chromium binary and a display. In headless-only CI containers it should work fine; interactive Windows desktops may need the binary pre-installed via `npm run test:e2e:install`.
 
@@ -76,6 +76,15 @@ No host strings are ever hardcoded. To move to a new domain:
 2. Add the new host to the Google + GitHub OAuth consoles.
 3. Deploy — no code changes needed.
 
-## Status
+### Nightly upstream drift test
 
-Plan 2 complete. See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap. Plan 3 adds stage-2 reranking and rationale generation.
+`tests/Feature/Jobs/JobSourcesUpstreamDriftTest.php` hits the real Greenhouse
+API against `stripe`'s public board. It is skipped by default (PR CI never runs it).
+Enable it nightly by setting `THROUGHLINE_UPSTREAM_DRIFT_TEST=1` in the scheduled
+CI environment. Treat a failure as a signal that a driver needs updating.
+
+## What's here now (post Plan 3)
+
+Resume upload + parse + embed, search-profile CRUD, six job-source drivers (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna), stage-1 cosine matching, stage-2 Claude rerank producing fit score + narrative + rationale + gap chips, nightly rerank refresh, feed ordering by `stage2_score DESC NULLS LAST, stage1_score DESC`, `?raw=1` debug bypass, and the `throughline:rerank-now` artisan command.
+
+See [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full plan roadmap. Plan 4 adds application tracking.

@@ -32,6 +32,17 @@ class TestingServiceProvider extends ServiceProvider
                         'structured' => ['skills' => ['PHP'], 'titles' => ['Engineer']],
                     ];
                 }
+
+                public function rerank(string $resumeText, array $jobs): array
+                {
+                    return array_map(fn ($j) => [
+                        'job_id' => $j['id'],
+                        'fit_score' => 75,
+                        'rationale' => 'Deterministic fake rationale for testing.',
+                        'gaps' => [['requirement' => 'Example requirement', 'severity' => 'stretch']],
+                        'narrative' => 'Fake career-arc narrative.',
+                    ], $jobs);
+                }
             };
         });
     }

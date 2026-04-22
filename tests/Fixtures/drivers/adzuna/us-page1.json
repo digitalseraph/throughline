@@ -1,0 +1,33 @@
+{
+  "count": 73,
+  "mean": 130000,
+  "results": [
+    {
+      "id": "4847392017",
+      "title": "Software Engineer",
+      "company": {"display_name": "OpenAI"},
+      "location": {"display_name": "San Francisco, CA", "area": ["US", "California", "San Francisco"]},
+      "category": {"label": "IT Jobs", "tag": "it-jobs"},
+      "description": "Build and maintain core platform infrastructure. Requires strong systems design skills and experience with distributed systems...",
+      "redirect_url": "https://www.adzuna.com/land/ad/4847392017",
+      "salary_min": 180000,
+      "salary_max": 280000,
+      "salary_is_predicted": "0",
+      "contract_type": "permanent",
+      "created": "2026-04-15T12:00:00Z"
+    },
+    {
+      "id": "4847392018",
+      "title": "Backend Engineer (Remote)",
+      "company": {"display_name": "Stripe"},
+      "location": {"display_name": "Remote", "area": ["US"]},
+      "category": {"label": "IT Jobs", "tag": "it-jobs"},
+      "description": "Remote backend role...",
+      "redirect_url": "https://www.adzuna.com/land/ad/4847392018",
+      "salary_min": null,
+      "salary_max": null,
+      "contract_type": "permanent",
+      "created": "2026-04-16T09:30:00Z"
+    }
+  ]
+}

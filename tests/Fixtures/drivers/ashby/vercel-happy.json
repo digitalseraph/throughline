@@ -1,0 +1,23 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "job_01H1234567890",
+      "title": "Software Engineer, Edge",
+      "departmentName": "Engineering",
+      "teamName": "Edge",
+      "employmentType": "FullTime",
+      "locationName": "San Francisco Bay Area",
+      "isListed": true,
+      "isRemote": false,
+      "publishedAt": "2026-04-14T09:00:00.000Z",
+      "jobUrl": "https://jobs.ashbyhq.com/vercel/abc-def",
+      "descriptionPlain": "We are looking for a talented engineer to work on our edge network...",
+      "descriptionHtml": "<p>We are looking for...</p>",
+      "compensation": {
+        "compensationTierSummary": "$180,000 - $220,000 USD",
+        "scrapeableCompensationSalarySummary": "$180,000 - $220,000 USD"
+      }
+    }
+  ]
+}
