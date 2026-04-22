@@ -5,6 +5,7 @@ import WaypointThread from '@/components/brand/WaypointThread.vue'
 
 defineProps<{
   user: { name: string }
+  siteName: string
 }>()
 </script>
 
@@ -12,7 +13,7 @@ defineProps<{
   <AppLayout>
     <Head title="Dashboard" />
     <div class="max-w-3xl mx-auto py-16 px-8">
-      <p class="font-mono text-[11px] uppercase tracking-widest text-oxblood mb-4">Your Throughline</p>
+      <p class="font-mono text-[11px] uppercase tracking-widest text-oxblood mb-4">Your {{ siteName }}</p>
       <h1 class="font-display text-4xl leading-tight text-ink mb-6" style="font-variation-settings: 'opsz' 144, 'SOFT' 30;">
         Welcome, <em class="italic">{{ user.name }}</em>.
       </h1>

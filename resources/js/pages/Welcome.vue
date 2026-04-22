@@ -12,7 +12,7 @@ defineProps<{
 </script>
 
 <template>
-  <Head title="Throughline" />
+  <Head :title="siteName" />
 
   <div class="min-h-screen bg-bone text-ink flex flex-col">
     <header class="flex items-center justify-between px-8 py-6">
