@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\JobController;
 use App\Http\Controllers\Admin\JobSourceController;
@@ -81,6 +82,8 @@ Route::middleware(['auth', EnsureAdmin::class])
 
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::patch('settings/{key}', [SettingController::class, 'update'])->name('settings.update');
+
+        Route::get('audit', [AuditLogController::class, 'index'])->name('audit.index');
     });
 
 Route::middleware('auth')->post('/impersonate/stop', ImpersonationStopController::class)->name('admin.impersonate.stop');
