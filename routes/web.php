@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\JobSourceController;
 use App\Http\Controllers\Admin\OverviewController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Applications\ApplicationController;
 use App\Http\Controllers\Applications\ContactController;
 use App\Http\Controllers\Applications\DocumentController;
@@ -61,6 +62,10 @@ Route::middleware(['auth', EnsureAdmin::class])
 
         Route::resource('job-sources', JobSourceController::class)->except('show');
         Route::post('job-sources/{job_source}/fetch-now', [JobSourceController::class, 'fetchNow'])->name('job-sources.fetch-now');
+
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+        Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
     });
 
 require __DIR__.'/settings.php';
