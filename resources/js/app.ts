@@ -7,7 +7,6 @@ import * as Sentry from '@sentry/vue';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
-import { initializeTheme } from './composables/useAppearance';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -56,6 +55,3 @@ createInertiaApp({
 
 // Ensures Echo is initialized at boot.
 void echo;
-
-// This will set light / dark mode on page load...
-initializeTheme();
