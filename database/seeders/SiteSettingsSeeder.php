@@ -34,6 +34,8 @@ class SiteSettingsSeeder extends Seeder
             ['key' => 'brand_color_primary_override',  'value' => '',     'type' => 'string', 'description' => 'Hex color override for the ink token (e.g. #1a1410).'],
             ['key' => 'brand_color_oxblood_override',  'value' => '',     'type' => 'string', 'description' => 'Hex color override for the oxblood accent.'],
             ['key' => 'brand_font_sans_override',      'value' => '',     'type' => 'string', 'description' => 'CSS font-family for body text; overrides Inter.'],
+            ['key' => 'cost_alert_threshold_usd',      'value' => '100.00', 'type' => 'string', 'description' => 'Monthly total threshold (USD); when current month crosses this, admins get one alert per month.'],
+            ['key' => 'cost_alert_last_notified_month', 'value' => '',     'type' => 'string', 'description' => 'YYYY-MM of the last month a threshold alert fired. Internal dedupe flag.'],
         ];
 
         foreach ($defaults as $row) {

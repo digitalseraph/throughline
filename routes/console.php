@@ -38,3 +38,13 @@ Schedule::call(function () {
         ApplicationReminderScan::dispatch();
     }
 })->everyMinute()->name('throughline-reminder-scan-gate')->withoutOverlapping();
+
+Schedule::command('costs:close-month')
+    ->monthlyOn(1, '00:01')
+    ->name('throughline-costs-close-month')
+    ->withoutOverlapping();
+
+Schedule::command('costs:check-alert')
+    ->dailyAt('01:00')
+    ->name('throughline-costs-check-alert')
+    ->withoutOverlapping();
