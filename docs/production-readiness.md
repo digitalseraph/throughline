@@ -14,6 +14,7 @@
 - `BROADCAST_CONNECTION=reverb`
 - `VITE_REVERB_APP_KEY`, `VITE_REVERB_HOST`, `VITE_REVERB_PORT`, `VITE_REVERB_SCHEME` (compiled into JS bundle)
 - S3 / filesystem creds if `FILESYSTEM_DISK != local`
+- `SENTRY_LARAVEL_DSN` (optional but recommended); paired with `VITE_SENTRY_DSN` for frontend errors. Trace sampling defaults to 10% via `SENTRY_TRACES_SAMPLE_RATE`.
 
 ## 2. External services
 
@@ -23,6 +24,7 @@
 - S3-compatible object storage for resume + application document uploads
 - OpenAI + Anthropic API keys with adequate rate limits
 - SMTP provider for transactional mail
+- Sentry project (optional) for backend + frontend error capture and sampled performance traces
 
 ## 3. Background processes
 
@@ -41,6 +43,7 @@
 ## 5. Monitoring
 
 - Horizon dashboard at `/horizon` (admin-gated); watch failed-jobs count
+- Sentry (if DSN configured): backend exceptions land via `Integration::handles()` in `bootstrap/app.php`; frontend errors land via `@sentry/vue`. Free tier covers ~5k events / 10k transactions per month at the default 10% sample rate.
 - Log aggregation — centralize `storage/logs/laravel.log`
 - Alert on: failed queue jobs > N/hour, auto-paused job sources, AI cost ceiling hits
 - Optional: Laravel Pulse for request/queue/cache metrics

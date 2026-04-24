@@ -13,6 +13,7 @@ use App\Http\Controllers\Applications\ApplicationController;
 use App\Http\Controllers\Applications\ContactController;
 use App\Http\Controllers\Applications\DocumentController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\ImpersonationStopController;
 use App\Http\Controllers\Resumes\ResumeController;
 use App\Http\Controllers\SearchProfiles\SearchProfileController;
@@ -30,12 +31,24 @@ Route::get('/', function (BrandConfig $brand) {
     ]);
 })->name('home');
 
+Route::get('/about', function (BrandConfig $brand) {
+    return Inertia::render('About', [
+        'siteName' => $brand->name(),
+        'tagline' => $brand->tagline(),
+    ]);
+})->name('about');
+
 Route::get('dashboard', function (BrandConfig $brand) {
     return Inertia::render('Dashboard', [
         'user' => ['name' => auth()->user()->name],
         'siteName' => $brand->name(),
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+// Public help center — no auth required
+Route::get('/help', [HelpController::class, 'index'])->name('help.index');
+Route::get('/help/{category}', [HelpController::class, 'category'])->name('help.category');
+Route::get('/help/{category}/{article}', [HelpController::class, 'article'])->name('help.article');
 
 Route::middleware('auth')->group(function () {
     Route::get('/resumes', [ResumeController::class, 'index'])->name('resumes.index');

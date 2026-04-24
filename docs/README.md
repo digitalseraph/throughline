@@ -22,7 +22,8 @@ Everything you need to run, extend, operate, and use Throughline.
 
 ## For operators
 
-- [Deployment](deployment.md) — step-by-step production deploy walkthrough
+- [Deployment](deployment.md) — step-by-step production deploy walkthrough (multi-target)
+- [Forge deployment runbook](deployment-forge.md) — concrete Laravel Forge + DigitalOcean recipe
 - [Operations](operations.md) — monitoring, backups, scaling, runbook
 - [Production readiness checklist](production-readiness.md) — pre-flight items before first deploy
 
@@ -42,5 +43,5 @@ Useful context if you're extending the app or want to understand why something i
 | New contributor | [Getting started](getting-started.md) → [Architecture](architecture.md) → [Reference](reference.md) |
 | End user | [User guide](user-guide.md) |
 | Admin / operator | [Admin guide](admin-guide.md) → [Operations](operations.md) |
-| Deploying Throughline | [External accounts](external-accounts-setup.md) → [Deployment](deployment.md) → [Production readiness](production-readiness.md) |
+| Deploying Throughline | [External accounts](external-accounts-setup.md) → [Deployment](deployment.md) (or [Forge runbook](deployment-forge.md)) → [Production readiness](production-readiness.md) |
 | On-call | [Operations](operations.md) runbook section |
