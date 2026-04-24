@@ -83,7 +83,7 @@ class AiClient
 
         $data = $response->json();
         $raw = $data['content'][0]['text'] ?? '';
-        $parsed = json_decode($raw, true);
+        $parsed = json_decode($this->stripJsonFences($raw), true);
         if (! is_array($parsed) || ! isset($parsed['text'], $parsed['structured'])) {
             throw new ParseFailed('Claude response did not contain text + structured keys', $raw);
         }
@@ -152,7 +152,7 @@ class AiClient
 
         $data = $response->json();
         $raw = $data['content'][0]['text'] ?? '';
-        $parsed = json_decode($raw, true);
+        $parsed = json_decode($this->stripJsonFences($raw), true);
 
         if (! is_array($parsed) || ! isset($parsed['matches']) || ! is_array($parsed['matches'])) {
             throw new RerankFailed('response did not contain matches array', $raw);
@@ -248,5 +248,21 @@ class AiClient
             'context_id' => $contextId,
             'created_at' => now(),
         ]);
+    }
+
+    /**
+     * Claude commonly wraps JSON in ```json ... ``` markdown fences even when
+     * told not to. Strip those before json_decode so a perfectly-shaped
+     * response isn't rejected for purely cosmetic reasons.
+     */
+    protected function stripJsonFences(string $text): string
+    {
+        $text = trim($text);
+
+        if (preg_match('/^```(?:json)?\s*\n?(.+?)\n?\s*```$/s', $text, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return $text;
     }
 }
