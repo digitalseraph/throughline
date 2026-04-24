@@ -55,6 +55,14 @@ class ParseResume implements ShouldQueue
         try {
             $result = $ai->forUser($resume->user)->parseResume($rawText);
         } catch (ParseFailed $e) {
+            // Surface the actual reason + Claude's raw response so the
+            // failure isn't a black box when it shows up in production.
+            Log::warning('Resume parse failed', [
+                'resume_id' => $resume->id,
+                'reason' => $e->reason,
+                'raw_response' => mb_substr((string) $e->rawResponse, 0, 2000),
+            ]);
+
             $resume->parse_status = 'parse_failed';
             $resume->save();
 
