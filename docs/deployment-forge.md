@@ -252,32 +252,45 @@ Either works. Do it before the first `migrate`.
 
 ## Step 6: Deploy script
 
-Forge → Site → Deploy Script. Replace the default with:
+Forge's Laravel template auto-generates a correct Zero Downtime Deployment script on site creation. The default looks like this and is what you want — **don't replace it** with a pre-ZDD `git pull` style script:
 
 ```bash
-cd $FORGE_SITE_PATH
+$CREATE_RELEASE()
 
-git pull origin $FORGE_SITE_BRANCH
+cd $FORGE_RELEASE_DIRECTORY
 
 $FORGE_COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+$FORGE_PHP artisan optimize
+$FORGE_PHP artisan storage:link
+$FORGE_PHP artisan migrate --force
 
-( flock -w 10 9 || exit 1
-    echo 'Restarting FPM...'; sudo -S service $FORGE_PHP_FPM reload ) 9>/tmp/fpmlock
-
-if [ -f artisan ]; then
-    $FORGE_PHP artisan migrate --force
-    $FORGE_PHP artisan config:cache
-    $FORGE_PHP artisan route:cache
-    $FORGE_PHP artisan view:cache
-    $FORGE_PHP artisan event:cache
-    $FORGE_PHP artisan horizon:terminate   # graceful restart so new code is picked up
-fi
-
-npm ci
+npm ci || npm install
 npm run build
+
+$ACTIVATE_RELEASE()
+
+$RESTART_QUEUES()
 ```
 
-Enable **Quick Deploy** so pushes to `main` auto-deploy.
+What the directives mean:
+
+- `$CREATE_RELEASE()` clones the tracked branch into a fresh `releases/<timestamp>/` directory.
+- `$FORGE_RELEASE_DIRECTORY` points at that new directory so the rest of the script runs against it, not the live `current/` symlink.
+- `artisan optimize` (Laravel 11+) caches `config`, `events`, `routes`, and `views` in one go — you don't need the four separate `*:cache` commands.
+- `artisan storage:link` is idempotent; Forge keeps `storage/` at the site root (shared across releases) and links it from each new release.
+- `$ACTIVATE_RELEASE()` atomically flips the `current` symlink to the new release. OPcache picks up new files by path; no FPM reload needed.
+- `$RESTART_QUEUES()` restarts the Horizon daemon so the queue worker loads the new code.
+
+### Reverb doesn't auto-restart — wire it up
+
+`$RESTART_QUEUES()` only touches Horizon. Reverb is a separate Forge daemon and needs to restart after each deploy to load updated event classes.
+
+- **Forge → Site → Daemons → Reverb daemon → enable "Restart After Deployment."**
+- Do the same on the Horizon daemon if it isn't already (Forge sets this ON by default, but verify).
+
+### Enable Quick Deploy
+
+Site → Apps tab → **Enable Quick Deploy** (if you didn't already in Step 3c). Pushes to `main` will trigger the deploy script via GitHub webhook.
 
 ## Step 7: Horizon as a supervised daemon
 
