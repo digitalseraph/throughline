@@ -295,19 +295,24 @@ Site → Apps tab → **Enable Quick Deploy** (if you didn't already in Step 3c)
 
 ## Step 7: Horizon as a background process
 
-Forge → your server → **Processes** tab → **Background Processes** sub-section → **Add Background Process**. (In Forge's current UI, the "Processes" tab contains **Background Processes** — what older docs and Supervisor config call "Daemons" — plus **Scheduler**. You create each process from scratch with the full `artisan` command; there's no pre-populated "Horizon" or "Reverb" entry to pick from.)
+Forge → your server → **Processes** tab → **Background Processes** sub-section → **Add Background Process**. (In the current Forge UI, the Processes tab contains **Background Processes** — what older docs and Supervisor configs call "Daemons" — plus **Scheduler**. You create each process from scratch with the full `artisan` command; there's no pre-populated "Horizon" or "Reverb" entry to pick from.)
 
-- **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan horizon`
-- **Directory**: `/home/forge/throughline.yourdomain.com/current`
-- **User**: `forge`
-- **Processes**: 1
-- **Stop signal**: `SIGTERM`
-- **Stop wait (seconds)**: 30
-- **Restart After Deployment**: **on** (so deploys reload Horizon cleanly)
+Fill in exactly:
 
-Save. Forge writes a Supervisor config under the hood and starts the process.
+| Field | Value |
+|---|---|
+| **Name** | `throughline-horizon` |
+| **Command** | `php8.4 /home/forge/throughline.yourdomain.com/current/artisan horizon` |
+| **Working Directory** | `/home/forge/throughline.yourdomain.com/current` |
+| **User** | `forge` |
+| **Processes** | `1` |
+| **Stop Signal** | `SIGTERM` |
+| **Stop Wait Seconds** | `30` |
+| **Restart After Deployment** | **on** (so deploys reload Horizon cleanly) |
 
-> Path uses `.../current/artisan` so Zero Downtime Deployment still resolves correctly — the `current` symlink points at whichever release is active, and the process keeps following it across deploys.
+Save. Forge writes a Supervisor config under the hood and starts the process — status should flip to **Running** within a few seconds.
+
+> The `current` in the path is critical — Zero Downtime Deployment stores each release under `releases/<timestamp>/`, and `current` is the symlink to the live one. Hardcoding a timestamp would break after the next deploy; `current` keeps following the symlink.
 
 Verify: in the browser, visit `https://throughline.yourdomain.com/horizon` as an admin user — the dashboard should load, and the ring should be green.
 
@@ -315,13 +320,16 @@ Verify: in the browser, visit `https://throughline.yourdomain.com/horizon` as an
 
 Same place (Processes → Background Processes), **Add Background Process** again.
 
-- **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan reverb:start --host=0.0.0.0 --port=8080`
-- **Directory**: `/home/forge/throughline.yourdomain.com/current`
-- **User**: `forge`
-- **Processes**: 1
-- **Restart After Deployment**: **on**
+| Field | Value |
+|---|---|
+| **Name** | `throughline-reverb` |
+| **Command** | `php8.4 /home/forge/throughline.yourdomain.com/current/artisan reverb:start --host=0.0.0.0 --port=8080` |
+| **Working Directory** | `/home/forge/throughline.yourdomain.com/current` |
+| **User** | `forge` |
+| **Processes** | `1` |
+| **Restart After Deployment** | **on** |
 
-Save.
+Save. If your tier's form doesn't expose Stop Signal / Stop Wait, the defaults are fine for Reverb.
 
 Then **configure Nginx** to proxy WebSocket traffic to Reverb. Forge → Site → Nginx Configuration. Inside the existing `server { ... }` block, add this location *before* the final catch-all:
 
