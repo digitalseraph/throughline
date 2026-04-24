@@ -50,7 +50,7 @@ class ResumeController extends Controller
     public function store(StoreResumeRequest $request): RedirectResponse
     {
         $file = $request->file('file');
-        $path = $file->store('resumes/'.auth()->id(), 'local');
+        $path = $file->store('resumes/'.auth()->id());
 
         $resume = auth()->user()->resumes()->create([
             'name' => $request->string('name'),
@@ -83,7 +83,7 @@ class ResumeController extends Controller
             // Best-effort cleanup — a leaked file is recoverable, but a
             // DB row pointing at a missing file would 500 any stream/stat.
             try {
-                Storage::disk('local')->delete($filePath);
+                Storage::delete($filePath);
             } catch (\Throwable $e) {
                 \Log::warning('Resume file cleanup failed', ['path' => $filePath, 'error' => $e->getMessage()]);
             }
