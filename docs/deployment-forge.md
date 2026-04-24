@@ -116,19 +116,28 @@ Click **Install Repository**. Forge clones the repo, runs `composer install --no
 
 Site detail page → **Apps** tab → **Enable Quick Deploy**. Forge registers a webhook with GitHub so pushes to `main` trigger an automatic deploy. Skip this if you want manual-only deploys.
 
-### 3d. SSL — wait until DNS resolves
+### 3d. SSL
 
-Don't provision SSL yet. Let's Encrypt needs the domain to actually resolve to the droplet via Cloudflare. Before continuing:
+Because Cloudflare is fronting the site in **Full (strict)** mode, the origin (your droplet) needs a cert Cloudflare trusts. There's a chicken-and-egg with Let's Encrypt here: Cloudflare tries to TLS-negotiate with the origin on 443 for every visitor, but the origin has no valid cert until you provision one. Until the cert is installed, visitors see **Cloudflare error 525 (SSL handshake failed).**
 
-1. Confirm Cloudflare has the A record you added in Step 1d and the proxy is on.
-2. Run `dig +short throughline.yourdomain.com` from your laptop — should return a Cloudflare IP (orange-cloud proxying hides the droplet's real IP; that's expected).
-3. Visit `http://throughline.yourdomain.com` — Nginx should serve the Laravel "Forge" holding page.
+**Recommended: Cloudflare Origin Certificate (permanent, no renewal dance).** Cloudflare issues a free cert signed by its private CA, valid only for Cloudflare edge → origin traffic. Never expires (15-year default), no Let's Encrypt bootstrap, no cron.
 
-Once the domain resolves:
+1. **Cloudflare → SSL/TLS → Origin Server → Create Certificate.**
+2. Key type: **RSA**, validity: **15 years**, hostnames: `throughline.yourdomain.com` (add `*.yourdomain.com` if you want to cover other subdomains too).
+3. Copy the **Origin Certificate** PEM block and the **Private Key** PEM block — you only see the private key once.
+4. **Forge → Site → SSL tab → Install Existing Certificate.** Paste the certificate and the private key. Save.
+5. **Forge → Site → SSL tab → Activate** the new cert (click the activate icon on the row).
+6. Visit `https://throughline.yourdomain.com` — should load cleanly. Cloudflare edge presents its public cert to the browser; Cloudflare-to-origin uses the Origin cert.
 
-- Site detail page → **SSL** tab → **LetsEncrypt** → domains pre-filled with your root domain → click **Obtain Certificate**.
-- Forge generates the cert and configures Nginx to redirect `http://` → `https://`.
-- Because Cloudflare is in front with SSL mode **Full (strict)** from Step 1d, the end-to-end chain is: browser ↔ Cloudflare (public cert) ↔ origin (Let's Encrypt cert from Forge).
+Caveat: the Origin cert is trusted **only** by Cloudflare, not by browsers. If you ever bypass the proxy (point DNS directly at the droplet), browsers will show a cert warning. That's fine when you're committed to Cloudflare.
+
+**Alternative: Let's Encrypt.** Works but requires a one-time gray-cloud dance to obtain the first cert:
+
+1. **Cloudflare → DNS → your A record → click the orange cloud to turn it gray** (DNS only, no proxy).
+2. Wait ~30 seconds.
+3. **Forge → Site → SSL tab → LetsEncrypt → Obtain Certificate.**
+4. **Cloudflare → DNS → click the gray cloud back to orange.**
+5. Keep Cloudflare at **Full (strict)**. Let's Encrypt auto-renews every ~60 days via Forge.
 
 ## Step 4: Environment variables
 
@@ -224,10 +233,12 @@ Save. Forge writes this to `/home/forge/throughline.yourdomain.com/.env`.
 
 The extension has to be enabled in the target database, not just the cluster.
 
+> **Zero Downtime Deployment note:** Forge's Laravel template defaults to Zero Downtime Deployment, which means the actual code lives at `/home/forge/<site>/current/` (a symlink to the newest `releases/<timestamp>/`), not at the top-level site directory. If you `ls /home/forge/<site>/` and see `auth.json  current  releases  storage`, you're in ZDD mode — `cd current/` before running any artisan commands.
+
 SSH into the server and run:
 
 ```bash
-cd /home/forge/throughline.yourdomain.com
+cd /home/forge/throughline.yourdomain.com/current
 php artisan tinker --execute="DB::statement('CREATE EXTENSION IF NOT EXISTS vector');"
 ```
 
@@ -330,17 +341,20 @@ Push your `main` branch — Quick Deploy runs the script. Watch Forge → Site �
 Once the deploy completes, SSH in and run:
 
 ```bash
-cd /home/forge/throughline.yourdomain.com
+cd /home/forge/throughline.yourdomain.com/current
 php artisan storage:link
 php artisan db:seed --class=SiteSettingsSeeder --force
 php artisan db:seed --class=JobSourcesSeeder --force
+php artisan db:seed --class=InfrastructureCostsSeeder --force
 ```
 
-These are one-time: `storage:link` creates the symlink Laravel needs for filesystem access; the two seeders populate the brand/site settings and the starter list of job sources (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs).
+These are one-time: `storage:link` creates the symlink Laravel needs for filesystem access; the three seeders populate the brand/site settings, the starter list of job sources (Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs), and the infrastructure cost line items (Forge, DO, Postmark, Sentry, etc.).
+
+> Still in Zero Downtime Deployment mode — always `cd .../current` before artisan. On future deploys `current/` is a symlink to a fresh `releases/<timestamp>/` directory, but tinker and artisan commands always resolve correctly through the symlink.
 
 ## Step 11: Create the first admin
 
-Because the auto-admin rule is "first user wins," you want to be that user. Visit `/register`, sign up with your real email, and you'll be admin on the first account. Or, if you prefer, create via tinker:
+Because the auto-admin rule is "first user wins," you want to be that user. Visit `/register`, sign up with your real email, and you'll be admin on the first account. Or, if you prefer, create via tinker from `/home/forge/<site>/current`:
 
 ```bash
 php artisan tinker
