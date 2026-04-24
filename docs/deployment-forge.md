@@ -280,14 +280,7 @@ What the directives mean:
 - `artisan optimize` (Laravel 11+) caches `config`, `events`, `routes`, and `views` in one go — you don't need the four separate `*:cache` commands.
 - `artisan storage:link` is idempotent; Forge keeps `storage/` at the site root (shared across releases) and links it from each new release.
 - `$ACTIVATE_RELEASE()` atomically flips the `current` symlink to the new release. OPcache picks up new files by path; no FPM reload needed.
-- `$RESTART_QUEUES()` restarts the Horizon daemon so the queue worker loads the new code.
-
-### Reverb doesn't auto-restart — wire it up
-
-`$RESTART_QUEUES()` only touches Horizon. Reverb is a separate background process and needs to restart after each deploy to load updated event classes.
-
-- **Forge → your server → Processes tab → Background Processes → Reverb → enable "Restart After Deployment."** In the current Forge UI, the "Processes" tab contains **Background Processes** (what older docs call Daemons) and **Scheduler**.
-- Do the same on the Horizon background process if it isn't already (Forge sets this ON by default, but verify).
+- `$RESTART_QUEUES()` restarts the Horizon background process so the queue worker loads the new code. **It does not touch Reverb** — Reverb is a separate background process. You'll handle Reverb's restart-on-deploy via the **Restart After Deployment** toggle in Step 8's form (and on the Horizon process in Step 7, just to be explicit about it).
 
 ### Enable Quick Deploy
 
@@ -310,6 +303,8 @@ Fill in exactly:
 | **Stop Wait Seconds** | `30` |
 | **Restart After Deployment** | **on** (so deploys reload Horizon cleanly) |
 
+> Technically `$RESTART_QUEUES()` in the deploy script already terminates Horizon so it reloads, so this toggle is belt-and-suspenders for Horizon. Turn it on anyway — if you ever tweak the deploy script and drop `$RESTART_QUEUES()`, the toggle keeps things working.
+
 Save. Forge writes a Supervisor config under the hood and starts the process — status should flip to **Running** within a few seconds.
 
 > The `current` in the path is critical — Zero Downtime Deployment stores each release under `releases/<timestamp>/`, and `current` is the symlink to the live one. Hardcoding a timestamp would break after the next deploy; `current` keeps following the symlink.
@@ -327,7 +322,7 @@ Same place (Processes → Background Processes), **Add Background Process** agai
 | **Working Directory** | `/home/forge/throughline.yourdomain.com/current` |
 | **User** | `forge` |
 | **Processes** | `1` |
-| **Restart After Deployment** | **on** |
+| **Restart After Deployment** | **on** — this is the critical one for Reverb. Unlike Horizon, the deploy script has no `$RESTART_REVERB()` helper, so without this toggle your Reverb process keeps running old code after every deploy until you SSH in and manually restart it. |
 
 Save. If your tier's form doesn't expose Stop Signal / Stop Wait, the defaults are fine for Reverb.
 
