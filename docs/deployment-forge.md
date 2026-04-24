@@ -68,16 +68,17 @@ Click **Create Server**. Provision takes ~5–10 minutes; watch the progress log
 
 Throughline needs `pdftotext` for resume parsing. It's not in Forge's default stack.
 
-- Forge → Server → **Recipes** → New Recipe → "Install Poppler":
+- **Forge top navigation → Recipes** (account-level, not inside a server) → **Create Recipe** → name it "Install Poppler":
 
   ```bash
-  sudo apt-get update
-  sudo apt-get install -y poppler-utils
+  apt-get update
+  apt-get install -y poppler-utils
   ```
 
-- Run the recipe once on this server. Confirm: SSH in and run `pdftotext -v` — should print a version.
+- **User**: `root` — the Forge recipe runner is non-interactive, so `sudo` prompts for a password it can't answer. Running as `root` avoids this.
+- Save the recipe, then click **Run** on it and pick your `throughline-prod` server. Confirm via SSH: `pdftotext -v` should print a version.
 
-Forge recipes are useful because they re-run on server rebuilds automatically if you have to reprovision.
+Forge recipes are useful because they re-run on server rebuilds automatically if you have to reprovision. If you'd rather skip the recipe, SSH in once and run `sudo apt-get update && sudo apt-get install -y poppler-utils` — same result.
 
 ## Step 3: Create the site
 
@@ -285,7 +286,7 @@ What the directives mean:
 
 `$RESTART_QUEUES()` only touches Horizon. Reverb is a separate Forge daemon and needs to restart after each deploy to load updated event classes.
 
-- **Forge → Site → Daemons → Reverb daemon → enable "Restart After Deployment."**
+- **Forge → your server → Daemons tab → Reverb daemon → enable "Restart After Deployment."** Daemons live at the server level, not the site level.
 - Do the same on the Horizon daemon if it isn't already (Forge sets this ON by default, but verify).
 
 ### Enable Quick Deploy
@@ -294,27 +295,31 @@ Site → Apps tab → **Enable Quick Deploy** (if you didn't already in Step 3c)
 
 ## Step 7: Horizon as a supervised daemon
 
-Forge → Site → Daemons → New Daemon.
+Forge → your server → **Daemons** tab → **New Daemon**. (Daemons are at the server level, not the site level.)
 
-- **Command**: `php8.4 /home/forge/throughline.yourdomain.com/artisan horizon`
-- **Directory**: `/home/forge/throughline.yourdomain.com`
+- **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan horizon`
+- **Directory**: `/home/forge/throughline.yourdomain.com/current`
 - **User**: `forge`
 - **Processes**: 1
 - **Stop signal**: `SIGTERM`
 - **Stop wait**: 30 seconds
+- **Restart After Deployment**: **on** (so deploys reload Horizon cleanly)
 
 Save. Forge writes a Supervisor config and starts the daemon.
+
+> Path uses `.../current/artisan` so Zero Downtime Deployment still resolves correctly — the `current` symlink points at whichever release is active, and the daemon keeps following it across deploys.
 
 Verify: in the browser, visit `https://throughline.yourdomain.com/horizon` as an admin user — the dashboard should load, and the ring should be green.
 
 ## Step 8: Reverb as a supervised daemon
 
-Same UI, second daemon.
+Same UI (server-level Daemons tab), second daemon.
 
-- **Command**: `php8.4 /home/forge/throughline.yourdomain.com/artisan reverb:start --host=0.0.0.0 --port=8080`
-- **Directory**: `/home/forge/throughline.yourdomain.com`
+- **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan reverb:start --host=0.0.0.0 --port=8080`
+- **Directory**: `/home/forge/throughline.yourdomain.com/current`
 - **User**: `forge`
 - **Processes**: 1
+- **Restart After Deployment**: **on**
 
 Save.
 
@@ -339,9 +344,9 @@ Verify: open `https://throughline.yourdomain.com` in a browser, open devtools �
 
 ## Step 9: Scheduler
 
-Forge → Server → Scheduler → New Scheduled Job.
+Forge → your server → **Scheduler** tab → **New Scheduled Job**. (Also server-level, like Daemons.)
 
-- **Command**: `php8.4 /home/forge/throughline.yourdomain.com/artisan schedule:run`
+- **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan schedule:run`
 - **Frequency**: Every minute
 - **User**: `forge`
 
@@ -417,7 +422,7 @@ Walk through the critical paths:
 
 **Horizon pings but processes don't run:** check Redis connectivity from the droplet (`redis-cli -u <connection string> ping`). Managed Redis over TLS requires `predis` not `phpredis` unless you compile the TLS support in.
 
-**Reverb WebSocket 502/504:** the daemon isn't running or Nginx isn't forwarding `/app` correctly. Check Forge → Site → Daemons and the Nginx location block.
+**Reverb WebSocket 502/504:** the daemon isn't running or Nginx isn't forwarding `/app` correctly. Check **Forge → Server → Daemons** and the Nginx location block.
 
 **pgvector errors on migrate:** extension isn't enabled. See Step 5.
 
