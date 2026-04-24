@@ -81,19 +81,54 @@ Forge recipes are useful because they re-run on server rebuilds automatically if
 
 ## Step 3: Create the site
 
-Forge → Server → **Sites** → Create Site.
+Forge → your `throughline-prod` server → **Sites** tab → **Create Site**.
 
-- **Root domain**: e.g. `throughline.yourdomain.com`
-- **Project Type**: General PHP / Laravel
-- **Web Directory**: `/public`
-- **PHP Version**: 8.4
-- **Create database**: uncheck (we're using managed Postgres)
+### 3a. Create Site form
 
-After the site is created:
+| Field | Value |
+|---|---|
+| **Root Domain** | `throughline.yourdomain.com` (the domain the Cloudflare A record points at) |
+| **Aliases** | leave blank |
+| **Project Type** | **Laravel** |
+| **Web Directory** | `/public` |
+| **PHP Version** | **PHP 8.4** |
+| **Create Database** | **unchecked** — we use DO Managed Postgres, not a local database |
+| **Database Name** | (field hidden when unchecked) |
+| **Isolation** | **off** — single-tenant droplet, not needed |
+| **Wildcard Subdomain** | **off** |
 
-1. **Git repository**: Forge → Site → Apps → install from GitHub. Point at your `throughline` repo, branch `main`.
-2. **Deploy script**: see Step 6 below.
-3. **SSL**: Forge → Site → SSL → Let's Encrypt. Do this *after* DNS resolves to the server.
+Click **Add Site**. Forge creates the Nginx vhost and drops you onto the site's detail page.
+
+### 3b. Install the Git repository
+
+On the site detail page → **Apps** tab → **Install Repository**.
+
+| Field | Value |
+|---|---|
+| **Provider** | **GitHub** (click "Connect with GitHub" if you haven't linked your account to Forge yet — one-time OAuth grant) |
+| **Repository** | `digitalseraph/throughline` (or your fork) |
+| **Branch** | `main` |
+| **Install Composer Dependencies** | **checked** |
+
+Click **Install Repository**. Forge clones the repo, runs `composer install --no-dev`, and generates a default deploy script. You'll replace that script in Step 6.
+
+### 3c. Enable Quick Deploy (optional but recommended)
+
+Site detail page → **Apps** tab → **Enable Quick Deploy**. Forge registers a webhook with GitHub so pushes to `main` trigger an automatic deploy. Skip this if you want manual-only deploys.
+
+### 3d. SSL — wait until DNS resolves
+
+Don't provision SSL yet. Let's Encrypt needs the domain to actually resolve to the droplet via Cloudflare. Before continuing:
+
+1. Confirm Cloudflare has the A record you added in Step 1d and the proxy is on.
+2. Run `dig +short throughline.yourdomain.com` from your laptop — should return a Cloudflare IP (orange-cloud proxying hides the droplet's real IP; that's expected).
+3. Visit `http://throughline.yourdomain.com` — Nginx should serve the Laravel "Forge" holding page.
+
+Once the domain resolves:
+
+- Site detail page → **SSL** tab → **LetsEncrypt** → domains pre-filled with your root domain → click **Obtain Certificate**.
+- Forge generates the cert and configures Nginx to redirect `http://` → `https://`.
+- Because Cloudflare is in front with SSL mode **Full (strict)** from Step 1d, the end-to-end chain is: browser ↔ Cloudflare (public cert) ↔ origin (Let's Encrypt cert from Forge).
 
 ## Step 4: Environment variables
 
