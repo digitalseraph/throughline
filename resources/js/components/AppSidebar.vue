@@ -6,7 +6,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, ClipboardList, FileText, Folder, LayoutGrid, Search, ShieldCheck } from 'lucide-vue-next';
+import { ClipboardList, FileText, Folder, HelpCircle, LayoutGrid, Search, ShieldCheck } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const page = usePage<SharedData>();
@@ -37,14 +37,14 @@ const mainNavItems: NavItem[] = [
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
+        title: 'Help center',
+        href: '/help',
+        icon: HelpCircle,
     },
     {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits',
-        icon: BookOpen,
+        title: 'Github Repo',
+        href: 'https://github.com/digitalseraph/throughline',
+        icon: Folder,
     },
 ];
 
