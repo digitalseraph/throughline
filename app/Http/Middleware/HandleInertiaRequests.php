@@ -42,11 +42,21 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
+        $settings = app(SiteSettings::class);
+
         return array_merge(parent::share($request), [
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'site' => [
+                'signupsEnabled' => (bool) $settings->get('signups_enabled', true),
+                'maintenanceMode' => (bool) $settings->get('maintenance_mode', false),
+            ],
+            'flash' => [
+                'error' => $request->session()->get('error'),
+                'status' => $request->session()->get('status'),
             ],
             'reminderBadgeCount' => fn () => $request->user()
                 ? Cache::remember(

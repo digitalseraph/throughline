@@ -320,6 +320,8 @@ Grouped into two sections:
 
 **General** (everything not prefixed with `brand_`):
 
+- `signups_enabled` — when `false`, the public `/register` route redirects to login with "New registrations are currently closed", `POST /register` is blocked, and the OAuth callback refuses to create a new user (existing accounts can still sign in). The Welcome / About / Help pages hide the "Create account" CTAs while it's off. Default `true`.
+- `maintenance_mode` — when `true`, the site serves a static "We're tuning things up" page (HTTP 503) for everyone except admin users. Login + logout + the `/up` health endpoint stay open so admins can sign in to lift the lockout. Default `false`.
 - `stage1_score_floor` — minimum cosine similarity to produce a match row (default `0.2`).
 - `cost_ceiling_per_user_per_day_usd` — per-user daily spend ceiling (default `5.00`).
 - `openai_embeddings_model` — default `text-embedding-3-small`.
