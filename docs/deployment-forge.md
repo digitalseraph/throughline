@@ -326,9 +326,12 @@ Same place (Processes → Background Processes), **Add Background Process** agai
 
 Save. If your tier's form doesn't expose Stop Signal / Stop Wait, the defaults are fine for Reverb.
 
-Then **configure Nginx** to proxy WebSocket traffic to Reverb. Forge → Site → Nginx Configuration. Inside the existing `server { ... }` block, add this location *before* the final catch-all:
+Then **configure Nginx** to proxy WebSocket traffic to Reverb. In the current Forge UI the Nginx template lives at **Server → Runtime → Nginx**. (Earlier UIs exposed it per-site at Site → Nginx; the location varies by Forge release. Either way, you're editing the same `server { ... }` block content.)
+
+Paste this location block **right before `location /`** in the template:
 
 ```nginx
+# Reverb WebSocket proxy. Pusher protocol hits /app/<app-key>/...
 location /app {
     proxy_pass http://127.0.0.1:8080;
     proxy_http_version 1.1;
@@ -341,9 +344,17 @@ location /app {
 }
 ```
 
-Save — Forge reloads Nginx. The `/app` path is what the Pusher-compatible protocol uses; the server-side Reverb process listens on it internally.
+Order matters: Nginx matches by specificity. `/app` is more specific than `/`, and putting it before the catch-all in the template makes intent obvious and avoids relying on Nginx's tie-breaking. Save — Forge reloads Nginx across the server.
 
-Verify: open `https://throughline.yourdomain.com` in a browser, open devtools → Network → WS, and the `pusher://` WebSocket connection should establish with status 101.
+Verify:
+
+```bash
+ssh forge@<droplet-ip>
+sudo nginx -t
+# syntax is ok / test is successful
+```
+
+Then in the browser: open `https://throughline.yourdomain.com`, devtools → Network → filter **WS**, reload. A WebSocket to `wss://throughline.yourdomain.com/app/...` should establish with status **101 Switching Protocols**. If it 404s, the `/app` block isn't in the rendered config (re-save the template). If it 502s, the Reverb background process isn't listening on 8080 (check Server → Processes → Background Processes).
 
 ## Step 9: Scheduler
 
