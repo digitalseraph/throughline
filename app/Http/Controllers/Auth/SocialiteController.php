@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Services\SiteSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +37,19 @@ class SocialiteController extends Controller
 
         if (! $socialUser->getEmail()) {
             return redirect()->route('login')->with('error', 'Provider did not return an email address.');
+        }
+
+        // Refuse new account creation when signups are closed. Existing accounts
+        // (matched by email or by an existing SocialAccount row) still get in.
+        $signupsEnabled = (bool) app(SiteSettings::class)->get('signups_enabled', true);
+        if (! $signupsEnabled) {
+            $existingAccount = SocialAccount::where('provider', $provider)
+                ->where('provider_user_id', (string) $socialUser->getId())
+                ->exists();
+            $existingByEmail = User::where('email', $socialUser->getEmail())->exists();
+            if (! $existingAccount && ! $existingByEmail) {
+                return redirect()->route('login')->with('error', 'New registrations are currently closed.');
+            }
         }
 
         $user = DB::transaction(function () use ($provider, $socialUser) {

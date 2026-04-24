@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\EnsureSiteOpen::class,
         ]);
         // Exclude test-only helper routes from CSRF verification so the
         // Playwright APIRequestContext (which has no session/token) can hit them.
@@ -36,6 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // client IP, and host — needed for url() helpers, $request->secure(),
         // secure cookies, and rate limiting by real client IP.
         $middleware->trustProxies(at: '*');
+
+        // Aliases used by route definitions.
+        $middleware->alias([
+            'signups' => \App\Http\Middleware\EnsureSignupsEnabled::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         Integration::handles($exceptions);

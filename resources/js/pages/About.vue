@@ -13,6 +13,7 @@ const page = usePage();
 const authUser = computed<{ id: number; name: string } | null>(
     () => (page.props as any).auth?.user ?? null,
 );
+const signupsEnabled = computed(() => (page.props as any).site?.signupsEnabled ?? true);
 </script>
 
 <template>
@@ -29,7 +30,7 @@ const authUser = computed<{ id: number; name: string } | null>(
                 </template>
                 <template v-else>
                     <Link href="/login" class="hover:text-oxblood transition-colors">Sign in</Link>
-                    <Link href="/register" class="hover:text-oxblood transition-colors">Create account</Link>
+                    <Link v-if="signupsEnabled" href="/register" class="hover:text-oxblood transition-colors">Create account</Link>
                 </template>
             </nav>
         </header>
@@ -166,6 +167,7 @@ const authUser = computed<{ id: number; name: string } | null>(
                     </template>
                     <template v-else>
                         <Link
+                            v-if="signupsEnabled"
                             href="/register"
                             class="inline-flex items-center justify-center h-11 px-6 rounded-md bg-oxblood text-bone font-medium hover:opacity-90 transition-opacity"
                         >

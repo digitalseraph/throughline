@@ -10,6 +10,7 @@ const page = usePage();
 const authUser = computed<{ id: number; name: string; email: string } | null>(
     () => (page.props as any).auth?.user ?? null,
 );
+const signupsEnabled = computed(() => (page.props as any).site?.signupsEnabled ?? true);
 </script>
 
 <template>
@@ -30,6 +31,7 @@ const authUser = computed<{ id: number; name: string; email: string } | null>(
                     <template v-else>
                         <Link :href="route('login')" class="text-ink-2 hover:text-oxblood">Log in</Link>
                         <Link
+                            v-if="signupsEnabled"
                             :href="route('register')"
                             class="rounded-full bg-oxblood px-4 py-1.5 text-sm font-medium text-bone hover:bg-oxblood/90"
                         >

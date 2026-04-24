@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import Wordmark from '@/components/brand/Wordmark.vue'
 import WaypointThread from '@/components/brand/WaypointThread.vue'
 
-defineProps<{
+const props = defineProps<{
   canLogin: boolean
   canRegister: boolean
   siteName: string
   tagline: string
 }>()
+
+const page = usePage()
+const signupsEnabled = computed(() => (page.props as any).site?.signupsEnabled ?? true)
+const showRegister = computed(() => props.canRegister && signupsEnabled.value)
 </script>
 
 <template>
@@ -21,7 +26,7 @@ defineProps<{
         <Link href="/about" class="hover:text-oxblood transition-colors">About</Link>
         <Link href="/help" class="hover:text-oxblood transition-colors">Help</Link>
         <Link v-if="canLogin" href="/login" class="hover:text-oxblood transition-colors">Sign in</Link>
-        <Link v-if="canRegister" href="/register" class="hover:text-oxblood transition-colors">Create account</Link>
+        <Link v-if="showRegister" href="/register" class="hover:text-oxblood transition-colors">Create account</Link>
       </nav>
     </header>
 
@@ -35,7 +40,7 @@ defineProps<{
       </p>
       <div class="flex gap-4">
         <Link
-          v-if="canRegister"
+          v-if="showRegister"
           href="/register"
           class="inline-flex items-center justify-center h-11 px-6 rounded-md bg-oxblood text-bone font-medium hover:opacity-90 transition-opacity"
         >Get started</Link>

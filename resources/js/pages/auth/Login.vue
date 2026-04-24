@@ -7,13 +7,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 defineProps<{
     status?: string;
     canResetPassword: boolean;
 }>();
+
+const page = usePage();
+const flashError = computed(() => (page.props as any).flash?.error as string | undefined);
+const signupsEnabled = computed(() => (page.props as any).site?.signupsEnabled ?? true);
 
 const form = useForm({
     email: '',
@@ -34,6 +39,10 @@ const submit = () => {
 
         <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
             {{ status }}
+        </div>
+
+        <div v-if="flashError" class="mb-4 rounded border border-oxblood/30 bg-oxblood/10 px-3 py-2 text-center text-sm text-oxblood">
+            {{ flashError }}
         </div>
 
         <OAuthButtons />
@@ -85,9 +94,12 @@ const submit = () => {
                 </Button>
             </div>
 
-            <div class="text-center text-sm text-muted-foreground">
+            <div v-if="signupsEnabled" class="text-center text-sm text-muted-foreground">
                 Don't have an account?
                 <TextLink :href="route('register')" :tabindex="5">Sign up</TextLink>
+            </div>
+            <div v-else class="text-center text-sm text-muted-foreground">
+                New registrations are currently closed.
             </div>
         </form>
     </AuthBase>
