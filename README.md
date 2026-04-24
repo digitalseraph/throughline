@@ -70,8 +70,11 @@ The E2E spec drives the full happy path: register → upload resume → create s
 
 ## Production
 
-- [`docs/external-accounts-setup.md`](docs/external-accounts-setup.md) — every external account (OpenAI, Anthropic, OAuth providers, hosting, mail) and how to create + wire each one.
-- [`docs/deployment-forge.md`](docs/deployment-forge.md) — concrete Laravel Forge runbook for shipping to a DigitalOcean droplet with managed Postgres + Redis + Spaces.
+This install ships on **Laravel Forge → DigitalOcean (droplet + managed Postgres 16 + managed Redis 7 + Spaces) → Cloudflare**, with **Postmark** for transactional email and **Sentry** for error monitoring (backend + frontend).
+
+- [`docs/external-accounts-setup.md`](docs/external-accounts-setup.md) — every external account this install uses (DigitalOcean, Cloudflare, Postmark, Sentry, OpenAI, Anthropic, Google + GitHub OAuth, Adzuna, USAJobs) and how to create + wire each one.
+- [`docs/deployment-forge.md`](docs/deployment-forge.md) — the concrete Forge + DigitalOcean + Cloudflare runbook (this install's deployment path).
+- [`docs/deployment.md`](docs/deployment.md) — topology diagram, Nginx + Supervisor + Scheduler + rollback reference.
 - [`docs/production-readiness.md`](docs/production-readiness.md) — full checklist: env vars, background processes, first-deploy steps, monitoring, security, backups, rollback, post-deploy smoke test.
 
 ## Deployment portability

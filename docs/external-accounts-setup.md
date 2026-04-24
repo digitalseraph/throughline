@@ -2,19 +2,132 @@
 
 Throughline integrates with several external services. This doc walks you through exactly what to sign up for, where to click, and which values end up in your `.env`.
 
-None of the keys are mandatory for the app to *run* — it won't crash without them. But each missing key degrades a specific feature. The table below shows what breaks when each is absent.
+## This install's stack
 
-| Service | Required for | What breaks without it |
+| Layer | Provider | Why |
 |---|---|---|
-| **OpenAI** | Resume + job embeddings | Resumes stall at parse, feed stays empty |
-| **Anthropic (Claude)** | Resume parsing + stage-2 rerank | Resumes stall at parse; cards have no fit score / rationale |
-| **Google OAuth** | "Continue with Google" button | Email/password signup still works |
-| **GitHub OAuth** | "Continue with GitHub" button | Email/password signup still works |
-| **Adzuna** | `AdzunaDriver` paginated aggregator | Adzuna source auto-pauses after 3 failures; other 7 drivers unaffected |
-| **USAJobs** | `USAJobsDriver` federal jobs | USAJobs source auto-pauses; other drivers unaffected |
-| **SMTP provider** (SendGrid, Postmark, SES, Mailgun, etc.) | Email reminder delivery in production | In dev, `MAIL_MAILER=log` writes reminders to the log file so you can verify them |
-| **S3-compatible storage** | Resume + application document storage in production | In dev, files go to `storage/app/private/`; local works fine |
-| **Reverb** (self-hosted) | Real-time push for resume ready / nav badge / feed | App falls back to polling (30s). Full functionality preserved, just slower. |
+| Hosting (droplet) | **DigitalOcean** via Laravel Forge | Forge has first-class DO integration; smallest moving parts |
+| Postgres + pgvector | **DigitalOcean Managed Postgres 16** | One-click pgvector extension |
+| Redis | **DigitalOcean Managed Redis 7** | Same provider/billing as the droplet |
+| Object storage | **DigitalOcean Spaces** | S3-compatible, same provider |
+| DNS + edge | **Cloudflare** (free tier) | DDoS, edge cache for the public pages, free TLS |
+| Mail | **Postmark** | Best transactional deliverability for password resets + reminders |
+| Error monitoring | **Sentry** | Backend + frontend wired by default |
+| Embeddings | **OpenAI** (`text-embedding-3-small`) | Required |
+| Parse + rerank | **Anthropic Claude Sonnet 4.6** | Required |
+| Auth | **Google OAuth + GitHub OAuth** | Optional but enabled |
+| Job sources | **Adzuna + USAJobs** (plus the 6 unauthenticated drivers shipped in core) | Both keyed; Greenhouse / Lever / RemoteOK / Workable / Ashby / Remotive don't need accounts |
+
+The two AI keys are the only **strictly required** services. Everything else is optional but enabled in this install.
+
+## What breaks when a key is missing
+
+| Service | What breaks without it |
+|---|---|
+| **OpenAI** | Resumes stall at parse, feed stays empty |
+| **Anthropic (Claude)** | Resumes stall at parse; cards have no fit score / rationale |
+| **Google OAuth** | "Continue with Google" button hidden; email/password signup still works |
+| **GitHub OAuth** | "Continue with GitHub" button hidden; email/password signup still works |
+| **Adzuna** | Adzuna source auto-pauses after 3 failures; other 7 drivers unaffected |
+| **USAJobs** | USAJobs source auto-pauses; other drivers unaffected |
+| **Postmark** | Email reminders + password resets fail to send. In dev, `MAIL_MAILER=log` writes them to the log file so you can verify them. |
+| **DigitalOcean Spaces** | Resume + document uploads fail in production. In dev, files go to `storage/app/private/`; local works fine. |
+| **Cloudflare** | DNS still works via the registrar; you lose edge caching + DDoS. Not strictly needed. |
+| **Sentry** | Errors land in `storage/logs/laravel.log` only. Both SDKs no-op cleanly when DSN is blank. |
+| **Reverb** (self-hosted) | Real-time push falls back to polling (30s). Full functionality preserved, just slower. |
+
+## DigitalOcean (hosting + Postgres + Redis)
+
+**What it's used for:** the Forge-managed droplet, managed Postgres 16 (with pgvector), managed Redis 7, and the Spaces bucket. Most provisioning is driven by Forge; this section covers the account + API token, the two managed database clusters, and the network wiring. Spaces has its own section below.
+
+**Sign up:** [digitalocean.com](https://www.digitalocean.com) → add a payment method. Apply any promo credit you have.
+
+### API token for Forge
+
+Forge needs a DO API token to provision the droplet.
+
+1. DO console → **API** → **Generate New Token**.
+2. Name: `forge`, scopes: **Read + Write**, no expiration.
+3. Paste into Forge → **Server Providers → DigitalOcean**.
+
+### Managed Postgres 16 (with pgvector)
+
+1. DO console → **Databases** → **Create Database Cluster** → **PostgreSQL** → version **16**.
+2. Plan: **Dev DB** (1 GB RAM, ~$15/mo) is fine for personal scale; upsize later if you need it.
+3. Region: same as the droplet (keeps latency <1 ms).
+4. After creation: **Settings → Trusted Sources** → add the droplet's IP. This makes the DB reachable from the droplet only.
+5. **Settings → Extensions** → enable `vector`. (Or run `CREATE EXTENSION IF NOT EXISTS vector;` from a psql session.)
+6. **Connection Details** pane shows the host, port, user, password, and database name — paste into the `DB_*` block of `.env`.
+
+### Managed Redis 7
+
+1. DO console → **Databases** → **Create Database Cluster** → **Redis**.
+2. Plan: Dev DB (1 GB) is plenty.
+3. Region: same as the droplet.
+4. Same trusted-sources setup: restrict to the droplet IP.
+5. **Connection Details** → copy host / port / password. DO managed Redis uses TLS, so `REDIS_SCHEME=tls` and use `predis` (not `phpredis`).
+
+### Env vars
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=<from DO Postgres connection details>
+DB_PORT=25060
+DB_DATABASE=defaultdb
+DB_USERNAME=doadmin
+DB_PASSWORD=<from DO>
+DB_SSLMODE=require
+
+REDIS_CLIENT=predis
+REDIS_HOST=<from DO Redis connection details>
+REDIS_PORT=25061
+REDIS_PASSWORD=<from DO>
+REDIS_SCHEME=tls
+```
+
+### Cost (small install)
+
+~$50/mo before droplet + mail + AI: droplet $18 + Postgres $15 + Redis $15 + Spaces $5.
+
+---
+
+## Cloudflare (DNS + edge)
+
+**What it's used for:** DNS, edge caching for the public Welcome / About / Help pages, and free DDoS protection.
+
+**Sign up:** [cloudflare.com](https://www.cloudflare.com) → free plan.
+
+### Set up the zone
+
+1. **Add a site** — enter your domain.
+2. Cloudflare scans existing DNS records; review them.
+3. Update your registrar's nameservers to the two Cloudflare-provided nameservers.
+4. DNS → **Add record**:
+   - Type: **A**
+   - Name: `throughline` (or `@` for apex)
+   - IPv4 address: your Forge droplet IP
+   - Proxy status: **Proxied** (orange cloud)
+5. **SSL/TLS → Overview** → set mode to **Full (strict)** so the Let's Encrypt cert Forge installs on the droplet is honored end-to-end.
+6. **SSL/TLS → Edge Certificates** → enable **Always Use HTTPS** and **Automatic HTTPS Rewrites**.
+
+### Reverb (WebSocket) on Cloudflare
+
+The free plan supports WebSocket proxying out of the box — no extra config needed. The `/app/*` path for the Pusher-compatible protocol passes through Cloudflare transparently.
+
+### Page rules (optional)
+
+If you want to aggressively cache the public marketing surface:
+
+- `throughline.yourdomain.com/help/*` → Cache Level: Cache Everything, Edge Cache TTL: 1 hour.
+- `throughline.yourdomain.com/about` → same.
+
+Don't cache `/` or any authenticated path.
+
+### Sanity check
+
+After DNS propagates (`dig +short throughline.yourdomain.com`), visit your site. The response headers should include `cf-ray` and `cf-cache-status` — that confirms you're proxied.
+
+---
 
 ## OpenAI API key
 
@@ -207,33 +320,25 @@ USAJobs is US-only. `validateIdentifier` accepts null (single-feed aggregator sh
 
 ---
 
-## SMTP (production email)
+## Postmark (transactional email)
 
-**What it's used for:** Daily email reminders for applications with due `next_action_at`. In dev, `MAIL_MAILER=log` drops them to `storage/logs/laravel.log`; you don't need SMTP locally.
+**What it's used for:** Password reset emails, email verification, and daily email reminders for applications with due `next_action_at`. In dev, `MAIL_MAILER=log` drops everything to `storage/logs/laravel.log`; you don't need Postmark locally.
 
-### Choose a provider
+### Sign up + verify your sending domain
 
-Any Laravel-supported provider works. Common choices: SendGrid, Postmark, Amazon SES, Mailgun, Resend.
+1. Go to [postmarkapp.com](https://postmarkapp.com/) and create an account. Free trial sends 100 messages/month; paid starts at $15/mo for 10k.
+2. Create a **Server** — name it `throughline-prod`.
+3. Servers → `throughline-prod` → **Settings → API Tokens** → copy the **Server Token**.
+4. Add a **Sender Signature** for your sending domain (`reminders@yourdomain.com`). Postmark shows you SPF and DKIM records — add them to Cloudflare. Without SPF/DKIM, Gmail and Outlook silently route your password resets and reminders to spam.
 
-### Generic SMTP setup
+### Set it in `.env`
 
 ```env
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.your-provider.example.com
-MAIL_PORT=587
-MAIL_USERNAME=your-username
-MAIL_PASSWORD=your-password
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS="reminders@your-domain.com"
-MAIL_FROM_NAME="Throughline"
+MAIL_MAILER=postmark
+POSTMARK_TOKEN=<your-server-token>
+MAIL_FROM_ADDRESS="reminders@yourdomain.com"
+MAIL_FROM_NAME="${APP_NAME}"
 ```
-
-### Laravel-native drivers
-
-- **Postmark:** `MAIL_MAILER=postmark`, `POSTMARK_TOKEN=...`
-- **SendGrid:** use the SMTP config above with `MAIL_HOST=smtp.sendgrid.net`, `MAIL_USERNAME=apikey`, `MAIL_PASSWORD=<your api key>`.
-- **SES:** `MAIL_MAILER=ses`, `AWS_ACCESS_KEY_ID=...`, `AWS_SECRET_ACCESS_KEY=...`, `AWS_DEFAULT_REGION=us-east-1`.
-- **Resend:** `MAIL_MAILER=resend`, `RESEND_KEY=...`.
 
 ### Sanity check
 
@@ -243,7 +348,7 @@ In prod:
 php artisan throughline:reminder-scan-now
 ```
 
-Check your provider's outbound log. Users with opted-in `notification_email_enabled` and applications with `next_action_at <= now()` and non-terminal status should receive a mail.
+Check Postmark → `throughline-prod` → **Activity**. Users with `notification_email_enabled=true` and applications with `next_action_at <= now()` and non-terminal status should have mail recorded.
 
 In dev (`MAIL_MAILER=log`):
 
@@ -257,33 +362,39 @@ Check `storage/logs/laravel.log` for the rendered mail.
 
 ---
 
-## S3-compatible object storage (production)
+## DigitalOcean Spaces (object storage)
 
 **What it's used for:** Storing resume files (PDF/DOCX) and application documents (cover letters, portfolios, resume snapshots).
 
 **Not needed in dev** — the local disk under `storage/app/private/` is fine.
 
-### Any S3-compatible service
+### Create the bucket + access keys
 
-Throughline uses Laravel's filesystem layer; any S3-API-compatible storage works: AWS S3, DigitalOcean Spaces, Cloudflare R2, Backblaze B2, MinIO.
+1. DigitalOcean console → **Spaces Object Storage** → **Create Spaces Bucket**.
+2. Region: pick the one closest to your droplet (same region = <1 ms latency).
+3. Name: `throughline-prod-uploads`.
+4. File listing: **Restricted** (private). Files are accessed only via the authenticated app, which streams them through a controller.
+5. CDN: optional, not needed for private resume files.
+6. Create.
+7. Settings → **Spaces Access Keys** → **Generate New Key** → name it `throughline`. Copy both the access key and secret immediately.
 
 ### Configure in `.env`
 
 ```env
 FILESYSTEM_DISK=s3
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_DEFAULT_REGION=us-east-1
+AWS_ACCESS_KEY_ID=<spaces-access-key>
+AWS_SECRET_ACCESS_KEY=<spaces-secret>
+AWS_DEFAULT_REGION=nyc3                           # or whichever region you picked
 AWS_BUCKET=throughline-prod-uploads
-AWS_ENDPOINT=                   # only needed for non-AWS S3-compatible (DO Spaces, R2, etc.)
+AWS_ENDPOINT=https://nyc3.digitaloceanspaces.com  # match your region
 AWS_USE_PATH_STYLE_ENDPOINT=false
 ```
 
-### Bucket setup
+The S3 SDK Laravel uses is Spaces-compatible — no custom driver needed.
 
-- **Private bucket** (no public read). Files are accessed only via the authenticated app, which streams them through a controller.
-- **Enable versioning** (recommended for recovery).
-- Set a **lifecycle rule** to expire orphaned files after 30 days, if you want.
+### Sanity check
+
+Upload a resume through the web UI in production. Then in the DO Spaces console, browse the bucket — you should see the file under the resume's storage path (typically `resumes/{uuid}.pdf`).
 
 ---
 
@@ -392,75 +503,101 @@ The free tier (5k events / 10k transactions / 1 GB attachments per month) is ple
 
 ---
 
-## What your `.env` looks like with everything configured
+## What your production `.env` looks like with everything configured
 
-A fully-configured `.env` has these sections filled in (see [environment variables reference](reference.md#environment-variables) for the exhaustive list):
+Filled-in production env for this install (Forge → DO → Cloudflare → Postmark → Sentry). For an exhaustive variable list see [environment variables reference](reference.md#environment-variables).
 
 ```env
 APP_NAME=Throughline
-APP_ENV=local
-APP_KEY=base64:...
-APP_DEBUG=true
-APP_URL=http://localhost:8000
+APP_ENV=production
+APP_KEY=base64:...                                # php artisan key:generate --show
+APP_DEBUG=false
+APP_URL=https://throughline.yourdomain.com
 
+# DigitalOcean Managed Postgres 16 + pgvector
 DB_CONNECTION=pgsql
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_DATABASE=throughline
-DB_USERNAME=throughline
-DB_PASSWORD=throughline
+DB_HOST=<from DO connection details>
+DB_PORT=25060
+DB_DATABASE=defaultdb
+DB_USERNAME=doadmin
+DB_PASSWORD=<from DO>
+DB_SSLMODE=require
 
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-REDIS_PASSWORD=null
+# DigitalOcean Managed Redis 7 (TLS)
+REDIS_CLIENT=predis
+REDIS_HOST=<from DO connection details>
+REDIS_PORT=25061
+REDIS_PASSWORD=<from DO>
+REDIS_SCHEME=tls
 
 BROADCAST_CONNECTION=reverb
 QUEUE_CONNECTION=redis
 CACHE_STORE=redis
 SESSION_DRIVER=redis
+SESSION_LIFETIME=120
 
+# DigitalOcean Spaces (S3-compatible)
+FILESYSTEM_DISK=s3
+AWS_ACCESS_KEY_ID=<spaces-access-key>
+AWS_SECRET_ACCESS_KEY=<spaces-secret>
+AWS_DEFAULT_REGION=nyc3
+AWS_BUCKET=throughline-prod-uploads
+AWS_ENDPOINT=https://nyc3.digitaloceanspaces.com
+AWS_USE_PATH_STYLE_ENDPOINT=false
+
+# Postmark
+MAIL_MAILER=postmark
+POSTMARK_TOKEN=<server-token>
+MAIL_FROM_ADDRESS="reminders@yourdomain.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+# AI
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
-
+# OAuth
+GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-...
+GOOGLE_REDIRECT_URI=https://throughline.yourdomain.com/auth/google/callback
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
-GITHUB_REDIRECT_URI=http://localhost:8000/auth/github/callback
+GITHUB_REDIRECT_URI=https://throughline.yourdomain.com/auth/github/callback
 
+# Job source drivers
 ADZUNA_APP_ID=...
 ADZUNA_APP_KEY=...
-
 USAJOBS_AUTH_KEY=...
-USAJOBS_USER_AGENT_EMAIL=you@example.com
+USAJOBS_USER_AGENT_EMAIL=you@yourdomain.com
 
+# Reverb (TLS via Nginx → Cloudflare)
 REVERB_APP_ID=throughline
-REVERB_APP_KEY=throughline-key-dev
-REVERB_APP_SECRET=throughline-secret-dev
-REVERB_HOST=localhost
-REVERB_PORT=8080
-REVERB_SCHEME=http
+REVERB_APP_KEY=<random 32+ chars>
+REVERB_APP_SECRET=<random 32+ chars>
+REVERB_HOST=throughline.yourdomain.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
 VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
 VITE_REVERB_HOST="${REVERB_HOST}"
 VITE_REVERB_PORT="${REVERB_PORT}"
 VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 
-MAIL_MAILER=log
-MAIL_FROM_ADDRESS="reminders@throughline.local"
-MAIL_FROM_NAME="${APP_NAME}"
-
-SENTRY_LARAVEL_DSN=                  # leave blank to disable
+# Sentry
+SENTRY_LARAVEL_DSN=https://...@o0.ingest.sentry.io/0
 SENTRY_TRACES_SAMPLE_RATE=0.1
 SENTRY_PROFILES_SAMPLE_RATE=0.1
 SENTRY_SEND_DEFAULT_PII=false
+SENTRY_ENVIRONMENT=production
 VITE_SENTRY_DSN="${SENTRY_LARAVEL_DSN}"
 VITE_SENTRY_ENVIRONMENT="${APP_ENV}"
 VITE_SENTRY_TRACES_SAMPLE_RATE="${SENTRY_TRACES_SAMPLE_RATE}"
 ```
 
+For the local-dev equivalent (sqlite/Docker Postgres, MAIL_MAILER=log, Sentry blank), see `.env.example` in the repo root.
+
 ## Next steps
 
-- [User guide](user-guide.md) to walk through the features you just enabled.
-- [Deployment](deployment.md) for the general production walkthrough, or [Forge deployment runbook](deployment-forge.md) for a concrete Forge + DigitalOcean recipe.
+- [User guide](user-guide.md) — walk through the features you just enabled.
+- [Forge deployment runbook](deployment-forge.md) — the concrete Forge + DigitalOcean + Cloudflare recipe (this install's deployment path).
+- [Deployment overview](deployment.md) — topology, nginx, supervisor, scheduler reference (host-agnostic background).
