@@ -27,7 +27,7 @@ class DocumentController extends Controller
         // Storage writes are not transactional — acceptable tradeoff for v1, matching
         // the same pattern used by Plan 2 Task 5's resume upload.
         DB::transaction(function () use ($application, $file, $request) {
-            $path = $file->store('applications/'.$application->user_id.'/'.$application->id, 'local');
+            $path = $file->store('applications/'.$application->user_id.'/'.$application->id);
             $doc = $application->documents()->create([
                 'kind' => $request->input('kind'),
                 'file_path' => $path,
@@ -53,7 +53,7 @@ class DocumentController extends Controller
 
         if ($filePath) {
             try {
-                Storage::disk('local')->delete($filePath);
+                Storage::delete($filePath);
             } catch (\Throwable $e) {
                 Log::warning('Document file cleanup failed', ['path' => $filePath, 'error' => $e->getMessage()]);
             }

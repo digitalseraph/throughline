@@ -77,13 +77,27 @@ class ParseResume implements ShouldQueue
 
     protected function extractRawText(Resume $resume): string
     {
-        $diskPath = Storage::disk('local')->path($resume->source_file_path);
+        // pdftotext and phpWord both need a real local file path, so we pull the
+        // upload from whichever disk it lives on (local in dev, s3 in prod) into
+        // a temp file, parse it, and clean up. Using Storage (default disk)
+        // rather than Storage::disk('local') is the fix.
+        if (! Storage::exists($resume->source_file_path)) {
+            throw new \RuntimeException("Resume source not found on configured disk: {$resume->source_file_path}");
+        }
 
-        return match ($resume->source_mime) {
-            'application/pdf' => PdfToText::getText($diskPath, config('services.pdftotext.binary')),
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => $this->extractDocx($diskPath),
-            default => file_get_contents($diskPath) ?: '',
-        };
+        $ext = pathinfo($resume->source_file_path, PATHINFO_EXTENSION) ?: 'bin';
+        $tmpPath = tempnam(sys_get_temp_dir(), 'resume_').'.'.$ext;
+        file_put_contents($tmpPath, Storage::get($resume->source_file_path));
+
+        try {
+            return match ($resume->source_mime) {
+                'application/pdf' => PdfToText::getText($tmpPath, config('services.pdftotext.binary')),
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => $this->extractDocx($tmpPath),
+                default => file_get_contents($tmpPath) ?: '',
+            };
+        } finally {
+            @unlink($tmpPath);
+        }
     }
 
     protected function extractDocx(string $path): string
