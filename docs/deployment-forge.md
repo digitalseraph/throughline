@@ -286,7 +286,7 @@ What the directives mean:
 
 `$RESTART_QUEUES()` only touches Horizon. Reverb is a separate Forge daemon and needs to restart after each deploy to load updated event classes.
 
-- **Forge → your server → Daemons tab → Reverb daemon → enable "Restart After Deployment."** Daemons live at the server level, not the site level.
+- **Forge → your server → Processes tab → Daemons → Reverb daemon → enable "Restart After Deployment."** In the current Forge UI (2024+), Daemons, Queue Workers, and Scheduled Jobs all live under the server-level **Processes** tab.
 - Do the same on the Horizon daemon if it isn't already (Forge sets this ON by default, but verify).
 
 ### Enable Quick Deploy
@@ -295,7 +295,7 @@ Site → Apps tab → **Enable Quick Deploy** (if you didn't already in Step 3c)
 
 ## Step 7: Horizon as a supervised daemon
 
-Forge → your server → **Daemons** tab → **New Daemon**. (Daemons are at the server level, not the site level.)
+Forge → your server → **Processes** tab → **Daemons** sub-section → **New Daemon**. (In Forge's current UI, Daemons, Queue Workers, and Scheduled Jobs all live under the server-level **Processes** tab.)
 
 - **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan horizon`
 - **Directory**: `/home/forge/throughline.yourdomain.com/current`
@@ -313,7 +313,7 @@ Verify: in the browser, visit `https://throughline.yourdomain.com/horizon` as an
 
 ## Step 8: Reverb as a supervised daemon
 
-Same UI (server-level Daemons tab), second daemon.
+Same place (Processes → Daemons), second daemon.
 
 - **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan reverb:start --host=0.0.0.0 --port=8080`
 - **Directory**: `/home/forge/throughline.yourdomain.com/current`
@@ -344,7 +344,7 @@ Verify: open `https://throughline.yourdomain.com` in a browser, open devtools �
 
 ## Step 9: Scheduler
 
-Forge → your server → **Scheduler** tab → **New Scheduled Job**. (Also server-level, like Daemons.)
+Forge → your server → **Processes** tab → **Scheduled Jobs** sub-section → **New Scheduled Job**. (Also under Processes, alongside Daemons and Queue Workers.)
 
 - **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan schedule:run`
 - **Frequency**: Every minute
@@ -422,7 +422,7 @@ Walk through the critical paths:
 
 **Horizon pings but processes don't run:** check Redis connectivity from the droplet (`redis-cli -u <connection string> ping`). Managed Redis over TLS requires `predis` not `phpredis` unless you compile the TLS support in.
 
-**Reverb WebSocket 502/504:** the daemon isn't running or Nginx isn't forwarding `/app` correctly. Check **Forge → Server → Daemons** and the Nginx location block.
+**Reverb WebSocket 502/504:** the daemon isn't running or Nginx isn't forwarding `/app` correctly. Check **Forge → Server → Processes → Daemons** and the Nginx location block.
 
 **pgvector errors on migrate:** extension isn't enabled. See Step 5.
 
