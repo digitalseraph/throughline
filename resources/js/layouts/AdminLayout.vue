@@ -13,7 +13,7 @@ const navItems = [
     { title: 'Settings', href: '/admin/settings', icon: '●' },
     { title: 'Audit', href: '/admin/audit', icon: '◉' },
     { title: 'Errors', href: '/admin/errors', icon: '◎' },
-    { title: 'Horizon', href: '/admin/horizon', icon: '◯' },
+    { title: 'Horizon', href: '/horizon', icon: '◯' },
 ];
 
 const page = usePage();
