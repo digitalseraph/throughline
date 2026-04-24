@@ -27,13 +27,42 @@ If you want to save: use Hetzner Cloud for the droplet (~$6/mo for equivalent sp
 
 ## Step 1: Provision the app server
 
-In Forge:
+**Prereq:** connect your DO API token to Forge first. **Forge → Server Providers → DigitalOcean → Connect**. Paste the token you generated in `external-accounts-setup.md` (Read+Write scope, no expiration).
 
-1. **Create Server** → DigitalOcean → Ubuntu 22.04, 2 GB droplet, pick the region closest to your Postgres cluster (same region keeps DB latency <1 ms).
-2. Set **PHP version to 8.4**.
-3. Name it something like `throughline-prod`.
-4. Forge will provision Nginx, MySQL (ignore — we use Postgres), Redis (ignore — we use managed), Supervisor, and a `forge` user.
-5. Once provisioned, note the IP and add it to the Postgres cluster's trusted source list.
+Then **Forge → Create Server** and fill in exactly this:
+
+| Field | Value |
+|---|---|
+| **Provider** | DigitalOcean |
+| **Credentials** | the token you just connected |
+| **Server Type** | **App Server** |
+| **Server Name** | `throughline-prod` |
+| **Region** | the same region as your DO Managed Postgres + Redis clusters. Mismatched regions add ~30 ms of DB latency per query. Pick it once for all four DO resources. |
+| **Server Size** | `s-2vcpu-2gb` (2 vCPU / 2 GB / 60 GB SSD, ~$18/mo) minimum. Bump to `s-2vcpu-4gb` (~$24/mo) for more headroom across Horizon + Reverb + php-fpm. Anything under 2 GB OOMs during `composer install`. |
+| **Database Type** | **None** — we use DO Managed Postgres, not a local one |
+| **Database Name** | leave blank (hidden when Type = None) |
+| **PHP Version** | **PHP 8.4** |
+| **Post-Provision Recipe** | leave unselected — we add the Poppler recipe in Step 2 |
+| **Server Network (VPC)** | default (auto-created VPC is fine) |
+| **Add to load balancer** | off |
+
+Click **Create Server**. Provision takes ~5–10 minutes; watch the progress log.
+
+### What Forge installs regardless
+
+- Nginx (we use it).
+- Local Redis (idle — we route `REDIS_HOST` to DO managed Redis).
+- Supervisor (we use it for the Horizon + Reverb daemons).
+- UFW (22, 80, 443 open; 8080 opens automatically when you add the Reverb daemon).
+- A `forge` user with your Forge-registered SSH keys preloaded.
+- Fail2Ban.
+
+### After provisioning finishes
+
+1. **Note the droplet's public IP** (shown on the server page in Forge).
+2. **Add that IP to DO Managed Postgres → Settings → Trusted Sources.**
+3. **Add that IP to DO Managed Redis → Settings → Trusted Sources.** Without steps 2 and 3, the app can't reach the databases.
+4. **Add a Cloudflare A record**: DNS → Add record → type A, name `throughline` (or your subdomain), IPv4 = droplet IP, proxy status **Proxied** (orange cloud).
 
 ## Step 2: Install Poppler (PDF text extraction)
 
