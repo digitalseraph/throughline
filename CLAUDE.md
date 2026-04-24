@@ -48,6 +48,8 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - `vendor/bin/pint --dirty` — format only changed files
 - `php artisan throughline:rerank-now {profile-id}` — synchronously rerank a profile's top-K stale matches
 - `php artisan throughline:reminder-scan-now` — run the application reminder scan synchronously (for dogfood debugging)
+- `php artisan costs:close-month [--month=YYYY-MM]` — write the monthly cost snapshot (runs automatically on the 1st at 00:01 UTC)
+- `php artisan costs:check-alert` — check if current-month total exceeds `cost_alert_threshold_usd` and mail admins (one-per-month dedupe; runs daily at 01:00 UTC)
 - `php artisan tinker` — REPL in app context
 - Horizon is gated by `Gate::define('viewHorizon')` registered in `HorizonServiceProvider` — admins only.
 
@@ -72,6 +74,7 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - **Reminder scan** (`ApplicationReminderScan`) runs daily at `site_settings.reminder_scan_hour_utc` (default 09:00 UTC). Writes a `reminder` event for overdue non-terminal applications once per day. Nav badge count is cached in Redis per user for `nav_reminder_badge_ttl_seconds` (default 60).
 - **Drivers (Plan 4)** — `RemotiveDriver` (single-feed aggregator) + `USAJobsDriver` (paginated + authenticated). Plan 2–4 complete the main product spec's 8-driver starter set: Greenhouse, Lever, RemoteOK, Workable, Ashby, Adzuna, Remotive, USAJobs.
 - **Admin dashboard** — `/admin` renders inside `AdminLayout`. All admin controllers extend `App\Http\Controllers\Admin\BaseController` which applies `EnsureAdmin` middleware and exposes `$this->audit()` for writing `admin_activity_log` rows. `admin_activity_log` is append-only (boot-time updating listener throws LogicException).
+- **Cost tracking** — `/admin/costs` combines fixed subscription line items (`infrastructure_costs` table, CRUD via `CostController`) with live AI spend from `ai_usage_events`. `InfrastructureCosts` service normalizes annual → monthly, computes month totals, and handles threshold-alert dedupe via `cost_alert_last_notified_month` in `site_settings`. `infrastructure_cost_snapshots` holds one row per month for the history chart, written by `costs:close-month` on the 1st. Threshold alerts via `costs:check-alert` dispatch `CostAlertMail` to admins with `notification_email_enabled = true`, at most once per calendar month.
 - **Impersonation** is one-level only. `original_user_id` lives in the session; `ImpersonationBanner` renders whenever the key is set. `POST /impersonate/stop` takes the user back without requiring admin role (it's the impersonated user that clicks it).
 - **Analytics** — `App\Services\Admin\Analytics` returns Chart.js-ready arrays. No daily-aggregates table in v1; raw queries are fast enough for the seeded dataset.
 - **Horizon** mounted at `/horizon` gated by the `viewHorizon` Gate which checks `user->isAdmin()`. Registered in `HorizonServiceProvider::gate()`.

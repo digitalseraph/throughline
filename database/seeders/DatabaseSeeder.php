@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SiteSettingsSeeder::class,
             JobSourcesSeeder::class,
+            InfrastructureCostsSeeder::class,
         ]);
     }
 }

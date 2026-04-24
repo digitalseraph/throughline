@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\CostController;
 use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\JobController;
@@ -94,6 +95,12 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::get('jobs/{canonical_job}', [JobController::class, 'show'])->name('jobs.show');
 
         Route::get('analytics', [AnalyticsController::class, 'show'])->name('analytics');
+
+        Route::get('costs', [CostController::class, 'index'])->name('costs.index');
+        Route::post('costs', [CostController::class, 'store'])->name('costs.store');
+        Route::patch('costs/threshold', [CostController::class, 'updateThreshold'])->name('costs.threshold');
+        Route::patch('costs/{cost}', [CostController::class, 'update'])->name('costs.update');
+        Route::delete('costs/{cost}', [CostController::class, 'destroy'])->name('costs.destroy');
 
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::patch('settings/{key}', [SettingController::class, 'update'])->name('settings.update');

@@ -11,6 +11,7 @@ Everything the admin surface gives you at `/admin`.
 - [Jobs](#jobs)
 - [Sources](#sources)
 - [Analytics](#analytics)
+- [Costs](#costs)
 - [Settings](#settings)
 - [Audit log](#audit-log)
 - [Error log](#error-log)
@@ -270,6 +271,42 @@ Bar chart showing count per status across all users: Saved / Applied / Phone scr
 ### Data freshness
 
 Queries hit raw tables directly — no caching. For realistic v1 data volumes this is fine; page loads under a second. If it slows, a daily-aggregates table is the future-plan escape hatch.
+
+---
+
+## Costs
+
+`/admin/costs` — tracks the total cost of running Throughline: fixed subscription line items (Forge, DO droplet, Postgres, Redis, Spaces, Cloudflare, Postmark, Sentry) plus live AI spend pulled from `ai_usage_events`.
+
+### Header cards
+
+- **This month total** — fixed subscriptions + AI month-to-date. Highlighted in oxblood when over threshold.
+- **Fixed subscriptions** — sum of active line items, annuals normalized to `/12`.
+- **AI month-to-date** — sum of `estimated_cost_usd` on `ai_usage_events` since the 1st of the current month.
+- **AI rolling 30d** — trailing 30-day window for planning.
+
+### Line items
+
+CRUD table of fixed subscriptions. Fields: name, category, amount (USD), billing cycle (monthly / annual), notes, active flag. Click **+ Add line item** or **Edit** / **Delete** per row. Every create/update/delete writes an entry to the admin audit log (`cost.created`, `cost.updated`, `cost.deleted`).
+
+Seeded defaults on a fresh install match the documented stack: Forge $12, DO droplet $18, DO Postgres $15, DO Redis $15, DO Spaces $5, Cloudflare $0, Postmark $15, Sentry $0.
+
+### Monthly history chart
+
+Line chart over the last 12 months showing three series: Fixed, AI, Total. Populated from `infrastructure_cost_snapshots`, which is written on the 1st of each month by `costs:close-month` (scheduled in `routes/console.php`). Empty until the first snapshot is recorded.
+
+### Alert threshold
+
+Admins get one email alert per calendar month if the current-month total crosses the configured threshold. Default is $100; set to 0 to disable. The dedupe key is `site_settings.cost_alert_last_notified_month` — it resets on the 1st via the close-month command.
+
+Alerts only send to admins whose `notification_email_enabled` is true (same flag that gates reminder emails). The check runs daily at 01:00 UTC (`costs:check-alert`).
+
+Force a close/check manually if needed:
+
+```bash
+php artisan costs:close-month --month=2026-03   # backfill a specific month
+php artisan costs:check-alert                    # run the threshold check now
+```
 
 ---
 

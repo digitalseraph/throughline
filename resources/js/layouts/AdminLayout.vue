@@ -9,6 +9,7 @@ const navItems = [
     { title: 'Jobs', href: '/admin/jobs', icon: '◐' },
     { title: 'Sources', href: '/admin/job-sources', icon: '◒' },
     { title: 'Analytics', href: '/admin/analytics', icon: '◕' },
+    { title: 'Costs', href: '/admin/costs', icon: '◍' },
     { title: 'Settings', href: '/admin/settings', icon: '●' },
     { title: 'Audit', href: '/admin/audit', icon: '◉' },
     { title: 'Errors', href: '/admin/errors', icon: '◎' },
