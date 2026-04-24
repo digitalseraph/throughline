@@ -1,286 +1,356 @@
-# External accounts and services
+# External accounts and API keys
 
-Every account, API key, and OAuth app you need to run Throughline — what it's for, how to create it, and which env vars it maps to. Work through this *before* deploying so the env file in [`deployment-forge.md`](deployment-forge.md) (or your local `.env`) can be filled in completely.
+Throughline integrates with several external services. This doc walks you through exactly what to sign up for, where to click, and which values end up in your `.env`.
 
-## At a glance
+None of the keys are mandatory for the app to *run* — it won't crash without them. But each missing key degrades a specific feature. The table below shows what breaks when each is absent.
 
-| Service | Required for | Cost (small install) |
+| Service | Required for | What breaks without it |
 |---|---|---|
-| OpenAI | Embeddings (resume + job) | ~$1–5/mo |
-| Anthropic | Resume parsing + stage-2 rerank | ~$5–20/mo |
-| Google Cloud Console | Sign in with Google (optional) | Free |
-| GitHub Developer Settings | Sign in with GitHub (optional) | Free |
-| Adzuna Developer Portal | Adzuna job source driver (optional) | Free |
-| USAJobs Developer Portal | USAJobs job source driver (optional) | Free |
-| DigitalOcean | Hosting (droplet + Postgres + Redis + Spaces) | ~$50/mo |
-| Postmark or SendGrid | Transactional email | $0–15/mo |
-| Cloudflare | DNS + edge (optional) | Free |
+| **OpenAI** | Resume + job embeddings | Resumes stall at parse, feed stays empty |
+| **Anthropic (Claude)** | Resume parsing + stage-2 rerank | Resumes stall at parse; cards have no fit score / rationale |
+| **Google OAuth** | "Continue with Google" button | Email/password signup still works |
+| **GitHub OAuth** | "Continue with GitHub" button | Email/password signup still works |
+| **Adzuna** | `AdzunaDriver` paginated aggregator | Adzuna source auto-pauses after 3 failures; other 7 drivers unaffected |
+| **USAJobs** | `USAJobsDriver` federal jobs | USAJobs source auto-pauses; other drivers unaffected |
+| **SMTP provider** (SendGrid, Postmark, SES, Mailgun, etc.) | Email reminder delivery in production | In dev, `MAIL_MAILER=log` writes reminders to the log file so you can verify them |
+| **S3-compatible storage** | Resume + application document storage in production | In dev, files go to `storage/app/private/`; local works fine |
+| **Reverb** (self-hosted) | Real-time push for resume ready / nav badge / feed | App falls back to polling (30s). Full functionality preserved, just slower. |
 
-The two AI keys are the only **strictly required** external services. Everything else is optional or replaceable (different host, different mail provider, no OAuth at all).
+## OpenAI API key
 
----
+**What it's used for:** `text-embedding-3-small` embeddings for resumes (per-user) and canonical jobs (system-attributed). Cost is tiny — $0.02 per 1M input tokens. A resume embed costs sub-cent; a job embed is similar.
 
-## 1. OpenAI
+### Sign up
 
-**Used for:** generating 1536-dim embeddings of resumes and job postings via `text-embedding-3-small`. Every resume upload and every newly-ingested job triggers one embedding call.
+1. Go to [platform.openai.com](https://platform.openai.com/) and create an account.
+2. Navigate to **API keys** in the left sidebar.
+3. Click **Create new secret key**. Name it "Throughline local" (or whatever).
+4. **Copy the key immediately** — you can't see it again after closing the modal.
 
-**Sign up:** [platform.openai.com](https://platform.openai.com) → Settings → Billing → add a payment method.
-
-**Create the key:**
-
-1. API Keys → **Create new secret key**.
-2. Name it `throughline-prod` (or `-dev`).
-3. Scope: full access is fine; restrict to embeddings if you want.
-4. Copy the key immediately — you can't see it again.
-
-**Env vars:**
+### Set it in `.env`
 
 ```env
-OPENAI_API_KEY=sk-...
+OPENAI_API_KEY=sk-...paste-your-key-here...
+OPENAI_ORGANIZATION=        # optional — leave blank unless you're on a team account
 ```
 
-**Suggested rate limit:** Tier 1 (the default after first payment) gives 5,000 embeddings/min — comfortably above what a small install will hit. Bump if you ingest >50k jobs/day.
+### Sanity check
 
-**Cost:** `text-embedding-3-small` is $0.02 per 1M input tokens. A typical resume is ~2k tokens; a typical job posting ~500 tokens. ~$1–5/mo for personal use.
+Upload a resume in the app. Within ~10 seconds of upload the resume detail page should flip from "Parsing…" to "Ready to match". If it stays on "Parsing…", check `storage/logs/laravel.log` for OpenAI-related errors.
+
+### Cost monitoring
+
+Throughline records every OpenAI call in `ai_usage_events`. The [admin Analytics page](admin-guide.md#analytics) includes a daily AI spend chart. The `site_settings.cost_ceiling_per_user_per_day_usd` (default `5.00`) blocks a user's cost-attributed calls from exceeding that ceiling per UTC day.
 
 ---
 
-## 2. Anthropic
+## Anthropic API key
 
-**Used for:** Claude Sonnet 4.6 calls — resume parsing (one-shot per upload) and stage-2 rerank (one batch call per top-K window per profile, fired on feed view + nightly).
+**What it's used for:** Claude Sonnet for resume parsing (extracts structured JSON from raw text) and stage-2 rerank (per-job fit score + rationale + gaps + narrative). Cost is ~$0.003/1K input tokens, $0.015/1K output tokens.
 
-**Sign up:** [console.anthropic.com](https://console.anthropic.com) → Plans → add a payment method.
+### Sign up
 
-**Create the key:**
+1. Go to [console.anthropic.com](https://console.anthropic.com/).
+2. Navigate to **API keys**.
+3. Click **Create Key**. Copy it.
 
-1. Settings → API Keys → **Create Key**.
-2. Workspace: Default.
-3. Copy the key.
-
-**Env vars:**
+### Set it in `.env`
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_API_KEY=sk-ant-...paste-your-key-here...
 ```
 
-**Cost:** rerank is the bulk of usage. A rerank batch is ~3k input + ~2k output tokens. Sonnet 4.6 is $3 per 1M input + $15 per 1M output. Typical user with daily feed checks: ~$5–20/mo. Caps are enforced server-side via `site_settings.cost_ceiling_per_user_per_day_usd`.
+### Sanity check
+
+After uploading a resume, the detail page eventually shows "Ready to match" and the feed starts producing cards with fit scores + rationale. The stage-2 rerank happens on first feed view for each set of top-K matches.
+
+### Model selection
+
+Default model is `claude-sonnet-4-6` for both resume parsing and rerank. Both are independently configurable via `site_settings`:
+
+- `anthropic_parse_model` — used by `AiClient::parseResume`
+- `anthropic_rerank_model` — used by `AiClient::rerank`
+
+Edit via the admin [Settings page](admin-guide.md#settings).
 
 ---
 
-## 3. Google OAuth (sign in with Google)
+## Google OAuth
 
-**Used for:** the "Continue with Google" button on the login + register pages. Optional — the app works fine with email + password only.
+**What it's used for:** "Continue with Google" button on login + register pages.
 
-**Sign up:** [console.cloud.google.com](https://console.cloud.google.com) — free Google account works.
+### Create the OAuth app
 
-**Create the project + credentials:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project (or use an existing one). Name it something like "Throughline dev".
+3. Navigate to **APIs & Services → OAuth consent screen**. Configure:
+   - User type: **External** (unless you're on a Google Workspace and want internal-only).
+   - App name: `Throughline`
+   - Support email: your email
+   - Scopes: add `.../auth/userinfo.email`, `.../auth/userinfo.profile`, `openid`
+   - Test users: add your own email while in testing mode
+4. Navigate to **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
+   - Application type: **Web application**
+   - Name: `Throughline local`
+   - Authorized redirect URIs: `http://localhost:8000/auth/google/callback`
+   - (For production, also add `https://your-domain.com/auth/google/callback`)
+5. Copy the **Client ID** and **Client Secret**.
 
-1. **New Project**: name it `throughline`.
-2. **APIs & Services → OAuth consent screen**:
-   - User Type: External.
-   - App name: `Throughline` (or your install's brand name).
-   - Support email: yours.
-   - Authorized domains: your production domain.
-   - Scopes: `email`, `profile`, `openid` (the defaults).
-   - Test users: add yourself if you keep the app in "Testing" status; otherwise submit for verification.
-3. **APIs & Services → Credentials → Create Credentials → OAuth client ID**:
-   - Application type: Web application.
-   - Name: `Throughline Web`.
-   - Authorized redirect URIs:
-     - `https://throughline.yourdomain.com/auth/google/callback`
-     - `http://localhost:8000/auth/google/callback` (for local dev)
-4. Copy the **Client ID** and **Client Secret**.
-
-**Env vars:**
+### Set them in `.env`
 
 ```env
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+GOOGLE_CLIENT_ID=...your-client-id....apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-...your-secret...
+GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
 ```
 
-**Gotcha:** the redirect URI in the Google console must match your `APP_URL` exactly — wrong scheme or trailing slash will fail with `redirect_uri_mismatch`.
+### Sanity check
+
+Go to `/login`. You should see a "Continue with Google" button. Click it, authorize the app, and you're signed in.
+
+Production redirect URI: adjust `GOOGLE_REDIRECT_URI` to match `APP_URL` + `/auth/google/callback`.
 
 ---
 
-## 4. GitHub OAuth (sign in with GitHub)
+## GitHub OAuth
 
-**Used for:** the "Continue with GitHub" button. Same optionality as Google.
+**What it's used for:** "Continue with GitHub" button on login + register pages.
 
-**Sign up:** GitHub account — already have one.
+### Create the OAuth app
 
-**Create the OAuth app:**
+1. Go to [github.com/settings/developers](https://github.com/settings/developers) → **New OAuth App**.
+2. Fill in:
+   - Application name: `Throughline local`
+   - Homepage URL: `http://localhost:8000`
+   - Authorization callback URL: `http://localhost:8000/auth/github/callback`
+3. Click **Register application**. On the next page, click **Generate a new client secret** and copy both the Client ID and the Secret.
 
-1. GitHub → Settings → **Developer settings** → **OAuth Apps** → **New OAuth App**.
-2. Application name: `Throughline`.
-3. Homepage URL: `https://throughline.yourdomain.com`.
-4. Authorization callback URL: `https://throughline.yourdomain.com/auth/github/callback`.
-5. **Register application**.
-6. **Generate a new client secret**.
-7. Copy the Client ID and the secret (the secret is only shown once).
-
-For local dev, register a second OAuth app with `http://localhost:8000` URLs — GitHub doesn't allow multiple callback URIs per app.
-
-**Env vars:**
+### Set them in `.env`
 
 ```env
-GITHUB_CLIENT_ID=...
-GITHUB_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+GITHUB_REDIRECT_URI=http://localhost:8000/auth/github/callback
 ```
+
+### Sanity check
+
+On `/login`, click "Continue with GitHub". After authorizing, you're signed in.
+
+For production, create a **separate GitHub OAuth app** with the production callback URL. GitHub OAuth apps are tied to a specific callback URL; using the same app for dev + prod is possible but not recommended.
 
 ---
 
-## 5. Adzuna (job source driver — optional)
+## Adzuna (paginated job aggregator)
 
-**Used for:** the `AdzunaDriver` (paginated aggregator covering ~10 countries). Skip if you only run ATS drivers (Greenhouse, Lever, Workable, Ashby) and direct-feed drivers (RemoteOK, Remotive).
+**What it's used for:** The `AdzunaDriver` pulls job listings from 14 country-scoped aggregator APIs. The seeded default is `us`.
 
-**Sign up:** [developer.adzuna.com](https://developer.adzuna.com) → free developer account.
+### Sign up
 
-**Get the credentials:**
+1. Go to [developer.adzuna.com](https://developer.adzuna.com/) and create an account.
+2. On the dashboard, your **App ID** and **App Key** are shown. Copy both.
+3. Free tier gives ~1,000 calls/month. If you're running the ingestion scheduler aggressively, that cap may be hit — upgrade or dial down `fetch_cadence_minutes` in the admin job-sources page.
 
-1. After signup, the dashboard shows **App ID** and **App Key**.
-2. Free tier: 1,000 calls/month. Each ingestion run uses ~5–20 calls per active country.
-
-**Env vars:**
+### Set them in `.env`
 
 ```env
-ADZUNA_APP_ID=...
-ADZUNA_APP_KEY=...
+ADZUNA_APP_ID=your-app-id
+ADZUNA_APP_KEY=your-app-key
+ADZUNA_MAX_PAGES=20          # optional — caps pagination per fetch
+ADZUNA_RESULTS_PER_PAGE=50
 ```
 
-**Enable in admin:** the driver is registered automatically if both env vars are set. To actually fetch, go to `/admin/job-sources` and create an Adzuna source row (set country code, query terms, etc.).
+### Sanity check
+
+In the admin sources page, click "Fetch now" on the Adzuna row. Wait a minute. Run `docker exec throughline-postgres psql -U throughline -d throughline -c "SELECT count(*) FROM canonical_jobs WHERE source = 'adzuna';"` — you should see a non-zero row count.
+
+### Other countries
+
+Adzuna supports US, UK, AT, AU, BE, BR, CA, CH, DE, ES, FR, IN, IT, MX, NL, NZ, PL, RU, SG, ZA. To ingest from a different country:
+
+1. Go to admin **Sources**, click **New source**.
+2. source_type: `adzuna`, identifier: the country code (e.g., `gb`)
+3. Click the edit pencil on the created row, set the `config_json` to `{"country": "gb"}` in the admin UI (or via `tinker` / a migration; see the [reference doc](reference.md#job-source-drivers)).
+
+The `AdzunaDriver` maps country → ISO-4217 currency automatically for the 14 supported markets.
 
 ---
 
-## 6. USAJobs (job source driver — optional)
+## USAJobs (US federal government)
 
-**Used for:** the `USAJobsDriver` (paginated, authenticated US federal jobs API). US-focused users only.
+**What it's used for:** `USAJobsDriver` pulls federal job postings. Free to use but requires registration with an API key + identifying User-Agent email.
 
-**Sign up:** [developer.usajobs.gov](https://developer.usajobs.gov) → request an API key. They email it.
+### Sign up
 
-**Env vars:**
+1. Go to [developer.usajobs.gov](https://developer.usajobs.gov/) → **Request Authorization Key**.
+2. Fill in the form: provide a name, email, and a description of your use case.
+3. After approval (usually instant), you get:
+   - `Authorization-Key` — your API key
+   - An email you declared — used in the `User-Agent` header (USAJobs requires a contact email in UA per their API docs)
+
+### Set them in `.env`
 
 ```env
-USAJOBS_AUTH_KEY=...
-USAJOBS_USER_AGENT_EMAIL=you@yourdomain.com
+USAJOBS_AUTH_KEY=your-authorization-key
+USAJOBS_USER_AGENT_EMAIL=you@example.com
+USAJOBS_MAX_PAGES=10
+USAJOBS_RESULTS_PER_PAGE=25
 ```
 
-The user-agent email is a USAJobs requirement — they bounce requests without one. Use a real address you check; they may email you about throttling.
+### Sanity check
+
+Admin sources → click "Fetch now" on the USAJobs row. Check `canonical_jobs` for rows with `source = 'usajobs'`.
+
+### Scope
+
+USAJobs is US-only. `validateIdentifier` accepts null (single-feed aggregator shape).
 
 ---
 
-## 7. DigitalOcean (hosting)
+## SMTP (production email)
 
-**Used for:** the Forge-managed droplet, the managed Postgres cluster (with pgvector), the managed Redis cluster, and the Spaces bucket for resume/document storage. Detailed wiring lives in [`deployment-forge.md`](deployment-forge.md); this section is just account setup.
+**What it's used for:** Daily email reminders for applications with due `next_action_at`. In dev, `MAIL_MAILER=log` drops them to `storage/logs/laravel.log`; you don't need SMTP locally.
 
-**Sign up:** [digitalocean.com](https://www.digitalocean.com) → add a payment method. Apply any promo credit you have.
+### Choose a provider
 
-**What you'll create (driven by Forge in most cases):**
+Any Laravel-supported provider works. Common choices: SendGrid, Postmark, Amazon SES, Mailgun, Resend.
 
-| Resource | Created via | Plan | ~Cost |
-|---|---|---|---|
-| Droplet (Ubuntu 22.04, 2 GB) | Forge UI | Basic | $18/mo |
-| Managed Postgres 16 + pgvector | DO console | Dev DB (1 GB) | $15/mo |
-| Managed Redis 7 | DO console | Dev DB (1 GB) | $15/mo |
-| Spaces bucket | DO console | 250 GB included | $5/mo |
+### Generic SMTP setup
 
-**API token:** Forge needs one to provision the droplet. DO console → API → **Generate New Token** → name it `forge`, scope `Read + Write`, no expiration. Paste into Forge → Server Providers → DigitalOcean.
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.your-provider.example.com
+MAIL_PORT=587
+MAIL_USERNAME=your-username
+MAIL_PASSWORD=your-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="reminders@your-domain.com"
+MAIL_FROM_NAME="Throughline"
+```
 
-**Spaces access keys:** DO console → Spaces → Settings → **Access Keys** → Generate. These map to `AWS_*` env vars (the S3 SDK is what Laravel uses; Spaces is S3-compatible).
+### Laravel-native drivers
 
-**Env vars (object storage):**
+- **Postmark:** `MAIL_MAILER=postmark`, `POSTMARK_TOKEN=...`
+- **SendGrid:** use the SMTP config above with `MAIL_HOST=smtp.sendgrid.net`, `MAIL_USERNAME=apikey`, `MAIL_PASSWORD=<your api key>`.
+- **SES:** `MAIL_MAILER=ses`, `AWS_ACCESS_KEY_ID=...`, `AWS_SECRET_ACCESS_KEY=...`, `AWS_DEFAULT_REGION=us-east-1`.
+- **Resend:** `MAIL_MAILER=resend`, `RESEND_KEY=...`.
+
+### Sanity check
+
+In prod:
+
+```bash
+php artisan throughline:reminder-scan-now
+```
+
+Check your provider's outbound log. Users with opted-in `notification_email_enabled` and applications with `next_action_at <= now()` and non-terminal status should receive a mail.
+
+In dev (`MAIL_MAILER=log`):
+
+```bash
+php artisan tinker
+>>> $user = User::first();
+>>> Mail::to($user)->send(new \App\Mail\ReminderDueMail($user, [Application::first()->id]));
+```
+
+Check `storage/logs/laravel.log` for the rendered mail.
+
+---
+
+## S3-compatible object storage (production)
+
+**What it's used for:** Storing resume files (PDF/DOCX) and application documents (cover letters, portfolios, resume snapshots).
+
+**Not needed in dev** — the local disk under `storage/app/private/` is fine.
+
+### Any S3-compatible service
+
+Throughline uses Laravel's filesystem layer; any S3-API-compatible storage works: AWS S3, DigitalOcean Spaces, Cloudflare R2, Backblaze B2, MinIO.
+
+### Configure in `.env`
 
 ```env
 FILESYSTEM_DISK=s3
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
-AWS_DEFAULT_REGION=nyc3
-AWS_BUCKET=throughline-prod
-AWS_ENDPOINT=https://nyc3.digitaloceanspaces.com
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=throughline-prod-uploads
+AWS_ENDPOINT=                   # only needed for non-AWS S3-compatible (DO Spaces, R2, etc.)
 AWS_USE_PATH_STYLE_ENDPOINT=false
 ```
 
+### Bucket setup
+
+- **Private bucket** (no public read). Files are accessed only via the authenticated app, which streams them through a controller.
+- **Enable versioning** (recommended for recovery).
+- Set a **lifecycle rule** to expire orphaned files after 30 days, if you want.
+
 ---
 
-## 8. Mail provider
+## Reverb (WebSocket server)
 
-**Used for:** password reset emails, email verification, daily application reminder emails (when due).
+**What it's used for:** Real-time push for resume-ready, reminder badge, feed rerank arrival. Self-hosted; no external account.
 
-Pick one:
+### Dev
 
-### Postmark (recommended)
+`composer run dev` starts Reverb automatically on port 8080 alongside PHP, Vite, and the queue listener. The `.env` vars in `.env.example` drive it.
 
-- [postmarkapp.com](https://postmarkapp.com) → free trial (100/mo) or $15/mo for 10k.
-- Verify your sending domain (SPF + DKIM via DNS records they provide).
-- Servers → Default → API Tokens → copy the **Server Token**.
+### Production
 
-```env
-MAIL_MAILER=postmark
-POSTMARK_TOKEN=...
-MAIL_FROM_ADDRESS="no-reply@yourdomain.com"
-MAIL_FROM_NAME="${APP_NAME}"
+Reverb is a long-running process. Run it as a systemd unit or supervisord process:
+
+```ini
+; /etc/supervisor/conf.d/reverb.conf
+[program:throughline-reverb]
+process_name=%(program_name)s
+command=php /var/www/throughline/artisan reverb:start --host=0.0.0.0 --port=8080
+autostart=true
+autorestart=true
+user=www-data
+stdout_logfile=/var/log/supervisor/throughline-reverb.log
 ```
 
-### SendGrid
-
-- [sendgrid.com](https://sendgrid.com) → free 100/day or paid plans from $15/mo.
-- Verify domain in Settings → Sender Authentication.
-- Settings → API Keys → Create → Full Access → copy.
+Production `.env`:
 
 ```env
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.sendgrid.net
-MAIL_PORT=587
-MAIL_USERNAME=apikey
-MAIL_PASSWORD=SG....
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS="no-reply@yourdomain.com"
-MAIL_FROM_NAME="${APP_NAME}"
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=<generated>
+REVERB_APP_KEY=<generated>
+REVERB_APP_SECRET=<generated>
+REVERB_HOST=reverb.your-domain.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 ```
 
-**Gotcha:** SPF + DKIM are mandatory in 2024+. Without them, Gmail and Outlook silently route your password resets and reminder emails to spam.
+Note `REVERB_PORT=443` and `REVERB_SCHEME=https` when you put Reverb behind a reverse proxy with SSL termination. Otherwise set `REVERB_PORT=8080` and `REVERB_SCHEME=http`.
+
+**Firewall:** open 8080 inbound, or proxy from 443 via nginx/Caddy. Reverb needs to be reachable by browsers, not just the PHP app.
 
 ---
 
-## 9. Cloudflare (DNS — optional but recommended)
+## Sentry (error + performance monitoring)
 
-**Used for:** DNS, edge caching of the public Welcome / About / Help pages, and free DDoS protection. Optional — your registrar's DNS works too.
+**What it's used for:** capturing PHP exceptions across web, queue, and scheduler via `sentry/sentry-laravel` (wired in `bootstrap/app.php`), plus Vue runtime errors and unhandled promise rejections via `@sentry/vue` (wired in `resources/js/app.ts`). Free to start; leave the DSN blank to disable both SDKs.
 
-**Sign up:** [cloudflare.com](https://www.cloudflare.com) → free plan.
+### Sign up
 
-**Set up:**
+1. Go to [sentry.io](https://sentry.io) and create a free account.
+2. **Create Project** → platform **Laravel** → name it `throughline`.
+3. Sentry shows the DSN — copy it. You can use the same DSN for the Vue side, or create a second project with platform **Vue** if you want to split frontend/backend events.
 
-1. **Add a site** — enter your domain.
-2. Cloudflare scans existing DNS records; review them.
-3. Update your registrar's nameservers to the two Cloudflare-provided nameservers.
-4. Add an **A record** pointing your subdomain (e.g., `throughline`) at your Forge server IP. Set proxy status to **proxied** (orange cloud).
-5. SSL/TLS → Overview → set to **Full (strict)** so the Let's Encrypt cert on the server is honored end-to-end.
-
-**Reverb gotcha:** Cloudflare's free plan supports WebSocket proxying — no extra config needed. If you're on Cloudflare Enterprise, ensure WebSockets are enabled on the zone.
-
----
-
-## 10. Sentry (error + performance monitoring)
-
-**Used for:** capturing PHP exceptions (web + queue + scheduler), Vue runtime errors, and a sampled slice of performance traces. Wired in by default — leave the DSN blank to disable.
-
-**Sign up:** [sentry.io](https://sentry.io) → free tier covers 5k events/mo.
-
-**Create the project:**
-
-1. Sentry → **Create Project** → platform **Laravel**.
-2. Name it `throughline`.
-3. Sentry shows the DSN — copy it.
-4. (Optional) Create a second project with platform **Vue** for the frontend, or reuse the Laravel DSN — events from both will land in the same project, tagged by SDK.
-
-**Env vars:**
+### Set them in `.env`
 
 ```env
 # Backend
 SENTRY_LARAVEL_DSN=https://...@o0.ingest.sentry.io/0
 SENTRY_TRACES_SAMPLE_RATE=0.1
 SENTRY_PROFILES_SAMPLE_RATE=0.1
-SENTRY_SEND_DEFAULT_PII=false        # don't send user emails / cookies
-SENTRY_RELEASE=                      # optional: git SHA injected at deploy time
+SENTRY_SEND_DEFAULT_PII=false        # don't capture user emails / cookies
+SENTRY_RELEASE=                      # optional: git SHA, set in deploy script
 SENTRY_ENVIRONMENT=production        # optional: defaults to APP_ENV
 
 # Frontend (interpolated from the backend DSN by default in .env.example)
@@ -289,42 +359,108 @@ VITE_SENTRY_ENVIRONMENT="${APP_ENV}"
 VITE_SENTRY_TRACES_SAMPLE_RATE="${SENTRY_TRACES_SAMPLE_RATE}"
 ```
 
-**What gets captured by default:**
+### What gets captured by default
 
-- All unhandled PHP exceptions in web requests, queue jobs, and scheduled tasks (via `Integration::handles()` in `bootstrap/app.php`).
-- All unhandled Vue errors and unhandled promise rejections in the browser.
-- A 10% sample of HTTP request traces and SQL queries (drop the sample rate or raise it via env).
+- All unhandled PHP exceptions in web requests, queue jobs, and scheduled tasks.
+- All unhandled Vue errors and promise rejections in the browser.
+- A 10% sample of HTTP request traces and SQL queries.
 - Breadcrumbs: cache events, SQL queries (without bindings), queue dispatches, HTTP client calls, log lines.
 - The `/up` health endpoint is excluded from transactions to keep noise down.
 
-**What's *not* captured:**
+### What's *not* captured
 
 - User PII (email, IP, cookies) — `SENTRY_SEND_DEFAULT_PII=false` is the default.
 - SQL query parameter bindings — bindings can contain credentials or user data.
 
-**Cost:** the free tier (5k events / 10k transactions / 1 GB attachments per month) is plenty for a personal install. The 10% trace sample rate keeps you well under the transaction limit even on a busy day.
+### Sanity check
 
-**Verify after deploy:** trigger a synthetic error from tinker and confirm it lands in Sentry:
+Trigger a synthetic error from tinker:
 
 ```bash
 php artisan tinker --execute="throw new \RuntimeException('Sentry verification — ignore');"
 ```
 
-The exception should appear in the Sentry project's Issues feed within a minute.
+The exception should appear in the project's Issues feed within a minute.
 
-**Disable for local dev:** leave `SENTRY_LARAVEL_DSN` blank in your `.env`. The SDK no-ops without a DSN, and the Vite tree-shaker drops `@sentry/vue` from the JS bundle entirely, so dev installs pay zero overhead.
+### Disable for local dev
+
+Leave `SENTRY_LARAVEL_DSN` blank in your `.env`. The PHP SDK no-ops without a DSN, and the Vite tree-shaker drops `@sentry/vue` from the JS bundle entirely — dev installs pay zero overhead.
+
+### Cost
+
+The free tier (5k events / 10k transactions / 1 GB attachments per month) is plenty for a personal install. The 10% trace sample rate keeps you well under the transaction limit even on a busy day.
 
 ---
 
-## Order of operations for a fresh install
+## What your `.env` looks like with everything configured
 
-1. **OpenAI + Anthropic keys** — without these the app can't function at all.
-2. **DigitalOcean account + API token** — needed before Forge can provision anything.
-3. **Postgres cluster** (with pgvector) and **Redis cluster** — provision while you set up the droplet.
-4. **Spaces bucket + access keys.**
-5. **Mail provider** (Postmark/SendGrid) — verify SPF/DKIM early; DNS propagation can take hours.
-6. **Domain DNS** (Cloudflare or registrar) — pointing at Forge server IP.
-7. **Google + GitHub OAuth apps** — register *after* DNS is live, so the redirect URIs match your real `APP_URL`.
-8. **Adzuna + USAJobs** — only if you plan to enable those drivers; can be added later via env + restart.
+A fully-configured `.env` has these sections filled in (see [environment variables reference](reference.md#environment-variables) for the exhaustive list):
 
-Once all the values are in hand, follow [`deployment-forge.md`](deployment-forge.md) end to end.
+```env
+APP_NAME=Throughline
+APP_ENV=local
+APP_KEY=base64:...
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=throughline
+DB_USERNAME=throughline
+DB_PASSWORD=throughline
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=null
+
+BROADCAST_CONNECTION=reverb
+QUEUE_CONNECTION=redis
+CACHE_STORE=redis
+SESSION_DRIVER=redis
+
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+GITHUB_REDIRECT_URI=http://localhost:8000/auth/github/callback
+
+ADZUNA_APP_ID=...
+ADZUNA_APP_KEY=...
+
+USAJOBS_AUTH_KEY=...
+USAJOBS_USER_AGENT_EMAIL=you@example.com
+
+REVERB_APP_ID=throughline
+REVERB_APP_KEY=throughline-key-dev
+REVERB_APP_SECRET=throughline-secret-dev
+REVERB_HOST=localhost
+REVERB_PORT=8080
+REVERB_SCHEME=http
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
+
+MAIL_MAILER=log
+MAIL_FROM_ADDRESS="reminders@throughline.local"
+MAIL_FROM_NAME="${APP_NAME}"
+
+SENTRY_LARAVEL_DSN=                  # leave blank to disable
+SENTRY_TRACES_SAMPLE_RATE=0.1
+SENTRY_PROFILES_SAMPLE_RATE=0.1
+SENTRY_SEND_DEFAULT_PII=false
+VITE_SENTRY_DSN="${SENTRY_LARAVEL_DSN}"
+VITE_SENTRY_ENVIRONMENT="${APP_ENV}"
+VITE_SENTRY_TRACES_SAMPLE_RATE="${SENTRY_TRACES_SAMPLE_RATE}"
+```
+
+## Next steps
+
+- [User guide](user-guide.md) to walk through the features you just enabled.
+- [Deployment](deployment.md) for the general production walkthrough, or [Forge deployment runbook](deployment-forge.md) for a concrete Forge + DigitalOcean recipe.

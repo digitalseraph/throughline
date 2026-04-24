@@ -1,6 +1,6 @@
 # Deploying Throughline with Laravel Forge
 
-A concrete runbook for shipping this app to production on Laravel Forge. Pairs with [`production-readiness.md`](production-readiness.md) (which lists env vars and external services) — this doc is about the Forge-specific wiring.
+A concrete runbook for shipping this app to production on Laravel Forge. Sits alongside [`deployment.md`](deployment.md) (the multi-target deployment guide covering Forge, Fly.io/Render/Railway, and bare VPS) — this doc is the focused Forge + DigitalOcean recipe with concrete UI steps and full env files. Pairs with [`production-readiness.md`](production-readiness.md) (env vars and external services) and [`external-accounts-setup.md`](external-accounts-setup.md) (every account you need to create first).
 
 ## What you'll provision
 
