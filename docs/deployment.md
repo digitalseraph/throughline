@@ -1,245 +1,101 @@
 # Deployment
 
-How to get Throughline from a working local clone to a running production instance. Complements the [production readiness checklist](production-readiness.md), which is a pre-flight list; this doc is the step-by-step walkthrough.
+This install's deployment topology and the host-agnostic background reference (nginx, supervisor, scheduler, SSL, rollback). For the concrete step-by-step on Laravel Forge + DigitalOcean + Cloudflare, see [`deployment-forge.md`](deployment-forge.md).
 
 ## Target topology
 
-A minimal Throughline production looks like this:
-
 ```
-┌───────────────────────┐      ┌──────────────────────────┐
-│  Load balancer / CDN  │─────▶│  Web server (nginx)      │
-│  (SSL termination)    │      │  + php-fpm (app code)    │
-└───────────────────────┘      └──────────────────────────┘
-          │                                │
-          ▼                                ▼
-┌───────────────────────┐      ┌──────────────────────────┐
-│  Reverb WebSocket     │      │  Background workers      │
-│  server (port 8080)   │      │  (Horizon + Scheduler)   │
-└───────────────────────┘      └──────────────────────────┘
-                                         │
-                                         ▼
-┌────────────────────────┐   ┌──────────┐   ┌──────────────┐
-│  PostgreSQL 16         │   │  Redis   │   │  S3 bucket   │
-│  + pgvector extension  │   │          │   │  (uploads)   │
-└────────────────────────┘   └──────────┘   └──────────────┘
+                          ┌──────────────────────┐
+                          │  Cloudflare          │
+                          │  (DNS + edge + TLS)  │
+                          └──────────┬───────────┘
+                                     │
+                          ┌──────────▼───────────┐
+                          │  Nginx (Forge)       │
+                          │  + php-fpm 8.4       │
+                          └──────────┬───────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        ▼                            ▼                            ▼
+┌──────────────────┐      ┌──────────────────────┐    ┌────────────────────┐
+│ Reverb daemon    │      │ Horizon daemon       │    │ Cron scheduler     │
+│ (WebSockets,     │      │ (queue worker)       │    │ (artisan           │
+│  port 8080,      │      │                      │    │  schedule:run)     │
+│  proxied at /app)│      │                      │    │                    │
+└──────────────────┘      └──────────────────────┘    └────────────────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        ▼                            ▼                            ▼
+┌──────────────────────┐   ┌──────────────────┐    ┌──────────────────────┐
+│ DO Managed Postgres  │   │ DO Managed Redis │    │ DO Spaces            │
+│ 16 + pgvector (TLS)  │   │ 7 (TLS)          │    │ (resumes + docs)     │
+└──────────────────────┘   └──────────────────┘    └──────────────────────┘
+
+                          ┌──────────────────────┐
+                          │ Sentry (errors +     │
+                          │ traces, backend +    │
+                          │ frontend)            │
+                          └──────────────────────┘
+
+                          ┌──────────────────────┐
+                          │ Postmark (mail)      │
+                          └──────────────────────┘
 ```
 
-Three runtime services on the app server (web + reverb + horizon), plus three managed data stores (Postgres, Redis, S3-compatible).
+Three runtime services on the droplet (web/php-fpm + Reverb + Horizon, plus the cron scheduler), three managed data stores at DO (Postgres, Redis, Spaces), Cloudflare in front, Sentry and Postmark out of band.
 
 ## Before you start
 
-Have this ready:
+You need:
 
-- A Linux server (Ubuntu 22.04+ recommended) or container platform (Fly.io, Render, Railway, Laravel Forge, etc.).
-- A domain name + SSL certificate strategy (Let's Encrypt works).
-- A managed Postgres 16 with pgvector, OR a server where you'll install Postgres yourself.
-- A managed Redis instance.
-- S3 credentials (or equivalent for whatever S3-compatible storage you chose).
-- All the API keys from [external accounts](external-accounts-setup.md).
-- An SMTP provider configured and tested.
+- All the keys + accounts in [external accounts](external-accounts-setup.md). The chosen stack is locked in there.
+- A domain name pointed at Cloudflare nameservers.
+- A DigitalOcean account + API token (Forge uses it to provision the droplet).
+- A Laravel Forge subscription.
 - Git access to the repo.
 
-## Deploy target choices
+## Deploy: this install
 
-### Option A: Laravel Forge / Ploi / Server management platforms
+Follow [`deployment-forge.md`](deployment-forge.md) end to end — that's the concrete Forge runbook for this install. The rest of this doc is reference material for the moving parts the runbook touches (nginx, supervisor, scheduler, SSL, rollback).
 
-The smoothest path. These know Laravel conventions — they'll install PHP, configure php-fpm, install Horizon as a service, wire up SSL, run the scheduler. You bring a VPS (DigitalOcean droplet, AWS EC2, Hetzner server) and the platform handles the rest.
+### Alternative deployment targets (not used here)
 
-Forge deploy instructions:
+If you ever migrate off Forge, the moving parts are unchanged. The substitutes that worked when this app was prototyped:
 
-1. Provision a server in Forge (pick Ubuntu 24.04, PHP 8.4).
-2. Create a site — point it at your git repo + branch.
-3. Add an "environment file" — paste your production `.env` content.
-4. Add a deploy script (Forge's default works, plus these additions):
-   ```bash
-   php artisan migrate --force
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   php artisan horizon:terminate
-   ```
-5. Under **Daemons**, add:
-   - Command: `php /home/forge/your-site/artisan reverb:start --host=0.0.0.0 --port=8080`
-   - User: `forge`
-6. Under **Scheduler**, enable it (Forge wires cron automatically).
-7. Configure SSL via LetsEncrypt.
-8. Set up a **Horizon Daemon** — Forge has a one-click option, or add manually:
-   - Command: `php /home/forge/your-site/artisan horizon`
-9. Configure nginx to proxy WebSocket requests to port 8080 (see [nginx + Reverb](#nginx--reverb)).
+- **Fly.io** — multi-process Docker app, managed Postgres with pgvector, native WebSocket support. `fly.toml` defines `web` / `worker` (Horizon) / `reverb` / `scheduler` from a single image.
+- **Render / Railway** — one service per process; bills per service so cost climbs with the process split.
+- **Bare VPS** — Ubuntu 22.04+ with manually installed PHP 8.4 / nginx / Supervisor / poppler-utils. Same nginx + supervisor configs as below.
 
-### Option B: Fly.io / Render / Railway (container-based)
-
-Works well but requires containerizing the app. A minimal `Dockerfile` for Throughline's app tier:
-
-```dockerfile
-FROM serversideup/php:8.4-fpm-nginx
-
-WORKDIR /var/www/html
-
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --optimize-autoloader
-
-COPY . .
-RUN composer dump-autoload --optimize --no-dev
-RUN php artisan config:cache route:cache view:cache
-
-# Install pdftotext for PDF resume parsing
-RUN apt-get update && apt-get install -y poppler-utils && rm -rf /var/lib/apt/lists/*
-```
-
-Build + push. On the platform side:
-
-- One service for the web app (this image, exposing port 80).
-- One service for Horizon (same image, command: `php artisan horizon`).
-- One service for Reverb (same image, command: `php artisan reverb:start --host=0.0.0.0 --port=8080`).
-- One cron-ish configuration for `php artisan schedule:run` every minute.
-
-Use the platform's managed Postgres + Redis if available (Fly has both; Render has managed Postgres; Railway has both).
-
-### Option C: Bare VPS
-
-If you want the full control experience, provision an Ubuntu 22.04+ VPS and install everything:
-
-```bash
-# PHP 8.4 from the ondrej PPA
-sudo add-apt-repository ppa:ondrej/php
-sudo apt update
-sudo apt install -y php8.4 php8.4-fpm php8.4-pgsql php8.4-redis php8.4-mbstring php8.4-xml php8.4-bcmath php8.4-zip
-
-# Composer
-curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# nginx
-sudo apt install -y nginx
-
-# Poppler for PDF extraction
-sudo apt install -y poppler-utils
-
-# Node for building frontend assets
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Supervisor for managing Horizon + Reverb
-sudo apt install -y supervisor
-
-# Git
-sudo apt install -y git
-```
-
-Then the deploy is roughly:
-
-```bash
-sudo mkdir -p /var/www/throughline && sudo chown $USER:$USER /var/www/throughline
-cd /var/www/throughline
-git clone https://github.com/your-org/throughline.git .
-composer install --no-dev --optimize-autoloader
-npm ci
-npm run build
-cp .env.example .env
-# edit .env with your production values
-php artisan key:generate
-php artisan migrate --force
-php artisan db:seed --class=SiteSettingsSeeder --force
-php artisan db:seed --class=JobSourcesSeeder --force
-php artisan storage:link
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
-
-Then [configure supervisor](#supervisor-configuration) and [nginx](#nginx-configuration).
+These aren't documented in detail because this install runs on Forge.
 
 ## Production `.env`
 
-Start from `.env.example` and fill in the following. The [external accounts doc](external-accounts-setup.md#what-your-env-looks-like-with-everything-configured) has a comprehensive example.
+The full filled-in example for this install lives in [external-accounts-setup.md → "What your production .env looks like"](external-accounts-setup.md#what-your-production-env-looks-like-with-everything-configured). Critical differences from local dev:
 
-Critical differences from dev:
+- `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://throughline.yourdomain.com`.
+- `DB_*` points at DigitalOcean Managed Postgres (`DB_PORT=25060`, `DB_SSLMODE=require`).
+- `REDIS_*` points at DigitalOcean Managed Redis (`REDIS_PORT=25061`, `REDIS_SCHEME=tls`, `REDIS_CLIENT=predis` — DO managed Redis uses TLS which `phpredis` can't speak without custom compilation).
+- `FILESYSTEM_DISK=s3` plus `AWS_*` credentials for DO Spaces (`AWS_ENDPOINT=https://nyc3.digitaloceanspaces.com` or your region).
+- `MAIL_MAILER=postmark` + `POSTMARK_TOKEN`.
+- `REVERB_PORT=443`, `REVERB_SCHEME=https` (TLS terminated at Cloudflare → Nginx; Reverb itself listens on `REVERB_SERVER_PORT=8080` internally).
+- `SENTRY_LARAVEL_DSN` + `VITE_SENTRY_DSN` set; sample rates default to 0.1.
 
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://your-domain.com
-
-DB_CONNECTION=pgsql
-DB_HOST=your-postgres-host.example.com
-DB_PORT=5432
-DB_DATABASE=throughline
-DB_USERNAME=throughline
-DB_PASSWORD=<strong-password>
-
-REDIS_HOST=your-redis-host.example.com
-REDIS_PORT=6379
-REDIS_PASSWORD=<strong-password>
-
-BROADCAST_CONNECTION=reverb
-QUEUE_CONNECTION=redis
-CACHE_STORE=redis
-SESSION_DRIVER=redis
-
-# Reverb with TLS via reverse proxy
-REVERB_APP_ID=<generate with `php artisan reverb:install` or bin2hex(random_bytes)>
-REVERB_APP_KEY=<generate>
-REVERB_APP_SECRET=<generate>
-REVERB_HOST=your-domain.com
-REVERB_PORT=443
-REVERB_SCHEME=https
-VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
-VITE_REVERB_HOST="${REVERB_HOST}"
-VITE_REVERB_PORT="${REVERB_PORT}"
-VITE_REVERB_SCHEME="${REVERB_SCHEME}"
-
-# Mail
-MAIL_MAILER=postmark   # or smtp, ses, mailgun, resend
-POSTMARK_TOKEN=<your-token>
-MAIL_FROM_ADDRESS="reminders@your-domain.com"
-MAIL_FROM_NAME="Throughline"
-
-# S3
-FILESYSTEM_DISK=s3
-AWS_ACCESS_KEY_ID=<your-key>
-AWS_SECRET_ACCESS_KEY=<your-secret>
-AWS_DEFAULT_REGION=us-east-1
-AWS_BUCKET=throughline-prod-uploads
-
-# AI + OAuth + driver keys — see external-accounts-setup.md
-```
-
-After any `.env` change: `php artisan config:clear` then restart Horizon + Reverb + php-fpm.
+After any `.env` change in Forge: click **Deploy Now** (or push an empty commit). The cached config picks up changes only on a deploy.
 
 ## Database setup
 
-### Managed Postgres
+The chosen Postgres is **DigitalOcean Managed Postgres 16** with the `vector` extension enabled at cluster creation time. Detailed setup is in [external-accounts-setup.md → DigitalOcean](external-accounts-setup.md#digitalocean-hosting--postgres--redis).
 
-Most managed providers don't include pgvector by default. Check with the provider:
-
-- **AWS RDS** — pgvector available on Postgres 16.
-- **Google Cloud SQL** — pgvector available on Postgres 14+.
-- **DigitalOcean Managed Postgres** — pgvector available on request.
-- **Supabase** — pgvector enabled by default.
-- **Neon** — pgvector enabled by default.
-
-Verify:
+If pgvector wasn't enabled at creation time, enable it from a psql session against the cluster:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-Should succeed.
-
-### Self-hosted Postgres
+Or from the droplet via tinker:
 
 ```bash
-sudo apt install -y postgresql-16 postgresql-16-pgvector
-
-sudo -u postgres psql <<SQL
-CREATE DATABASE throughline;
-CREATE USER throughline WITH ENCRYPTED PASSWORD 'your-password';
-GRANT ALL PRIVILEGES ON DATABASE throughline TO throughline;
-\c throughline
-CREATE EXTENSION vector;
-GRANT ALL ON SCHEMA public TO throughline;
-SQL
+php artisan tinker --execute="DB::statement('CREATE EXTENSION IF NOT EXISTS vector');"
 ```
 
 ### First migration

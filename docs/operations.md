@@ -159,15 +159,9 @@ A pragmatic v1 stack: log everything to a centralized log platform (Papertrail /
 
 ### Postgres
 
-**Nightly full dump + weekly compressed snapshot** is a solid baseline.
+This install uses **DigitalOcean Managed Postgres**, which takes daily backups automatically with 7-day retention on the base tier. Bump the cluster plan if you need a longer retention window, or run the script below as a belt-and-braces nightly dump for off-site storage.
 
-For managed Postgres, enable the provider's built-in backup:
-- RDS: automated backups with 7-day retention.
-- Supabase: daily snapshots on all plans.
-- Neon: point-in-time restore.
-- DO Managed Postgres: daily backups.
-
-For self-hosted:
+For self-hosted Postgres (or as off-site supplement to DO's backups):
 
 ```bash
 #!/bin/bash
@@ -185,10 +179,10 @@ Cron it nightly via root or a backup-specific user.
 
 ### What's actually critical to back up
 
-- **Postgres** — contains everything (users, resumes content, applications, audit log). This is the source of truth.
-- **S3 uploads** — resume files and application documents. Enable S3 bucket versioning for built-in recovery.
-- **Redis** — intentionally ephemeral (cache + queue + session). A Redis loss means in-flight queue jobs are lost (recoverable via queue retry) and all users log out (annoying but not data-loss).
-- **`.env`** — secrets. Keep a copy in a secure place (Vault, 1Password, AWS Secrets Manager). Never in version control.
+- **Postgres (DO Managed Postgres)** — contains everything (users, resume content, applications, audit log). This is the source of truth. Daily DO backups + the nightly off-site dump above.
+- **DigitalOcean Spaces** — resume files and application documents. Enable bucket versioning in the DO console for built-in recovery.
+- **Redis (DO Managed Redis)** — intentionally ephemeral (cache + queue + session). A Redis loss means in-flight queue jobs are lost (recoverable via queue retry) and all users log out (annoying but not data-loss). Managed Redis is replicated, so single-node failure is recovered automatically.
+- **`.env`** — secrets. Keep a copy in 1Password (or your password manager). Never in version control.
 
 ### Restore test
 
