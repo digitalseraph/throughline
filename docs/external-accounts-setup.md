@@ -332,6 +332,66 @@ Note `REVERB_PORT=443` and `REVERB_SCHEME=https` when you put Reverb behind a re
 
 ---
 
+## Sentry (error + performance monitoring)
+
+**What it's used for:** capturing PHP exceptions across web, queue, and scheduler via `sentry/sentry-laravel` (wired in `bootstrap/app.php`), plus Vue runtime errors and unhandled promise rejections via `@sentry/vue` (wired in `resources/js/app.ts`). Free to start; leave the DSN blank to disable both SDKs.
+
+### Sign up
+
+1. Go to [sentry.io](https://sentry.io) and create a free account.
+2. **Create Project** → platform **Laravel** → name it `throughline`.
+3. Sentry shows the DSN — copy it. You can use the same DSN for the Vue side, or create a second project with platform **Vue** if you want to split frontend/backend events.
+
+### Set them in `.env`
+
+```env
+# Backend
+SENTRY_LARAVEL_DSN=https://...@o0.ingest.sentry.io/0
+SENTRY_TRACES_SAMPLE_RATE=0.1
+SENTRY_PROFILES_SAMPLE_RATE=0.1
+SENTRY_SEND_DEFAULT_PII=false        # don't capture user emails / cookies
+SENTRY_RELEASE=                      # optional: git SHA, set in deploy script
+SENTRY_ENVIRONMENT=production        # optional: defaults to APP_ENV
+
+# Frontend (interpolated from the backend DSN by default in .env.example)
+VITE_SENTRY_DSN="${SENTRY_LARAVEL_DSN}"
+VITE_SENTRY_ENVIRONMENT="${APP_ENV}"
+VITE_SENTRY_TRACES_SAMPLE_RATE="${SENTRY_TRACES_SAMPLE_RATE}"
+```
+
+### What gets captured by default
+
+- All unhandled PHP exceptions in web requests, queue jobs, and scheduled tasks.
+- All unhandled Vue errors and promise rejections in the browser.
+- A 10% sample of HTTP request traces and SQL queries.
+- Breadcrumbs: cache events, SQL queries (without bindings), queue dispatches, HTTP client calls, log lines.
+- The `/up` health endpoint is excluded from transactions to keep noise down.
+
+### What's *not* captured
+
+- User PII (email, IP, cookies) — `SENTRY_SEND_DEFAULT_PII=false` is the default.
+- SQL query parameter bindings — bindings can contain credentials or user data.
+
+### Sanity check
+
+Trigger a synthetic error from tinker:
+
+```bash
+php artisan tinker --execute="throw new \RuntimeException('Sentry verification — ignore');"
+```
+
+The exception should appear in the project's Issues feed within a minute.
+
+### Disable for local dev
+
+Leave `SENTRY_LARAVEL_DSN` blank in your `.env`. The PHP SDK no-ops without a DSN, and the Vite tree-shaker drops `@sentry/vue` from the JS bundle entirely — dev installs pay zero overhead.
+
+### Cost
+
+The free tier (5k events / 10k transactions / 1 GB attachments per month) is plenty for a personal install. The 10% trace sample rate keeps you well under the transaction limit even on a busy day.
+
+---
+
 ## What your `.env` looks like with everything configured
 
 A fully-configured `.env` has these sections filled in (see [environment variables reference](reference.md#environment-variables) for the exhaustive list):
@@ -390,9 +450,17 @@ VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 MAIL_MAILER=log
 MAIL_FROM_ADDRESS="reminders@throughline.local"
 MAIL_FROM_NAME="${APP_NAME}"
+
+SENTRY_LARAVEL_DSN=                  # leave blank to disable
+SENTRY_TRACES_SAMPLE_RATE=0.1
+SENTRY_PROFILES_SAMPLE_RATE=0.1
+SENTRY_SEND_DEFAULT_PII=false
+VITE_SENTRY_DSN="${SENTRY_LARAVEL_DSN}"
+VITE_SENTRY_ENVIRONMENT="${APP_ENV}"
+VITE_SENTRY_TRACES_SAMPLE_RATE="${SENTRY_TRACES_SAMPLE_RATE}"
 ```
 
 ## Next steps
 
 - [User guide](user-guide.md) to walk through the features you just enabled.
-- [Deployment](deployment.md) when you're ready to ship.
+- [Deployment](deployment.md) for the general production walkthrough, or [Forge deployment runbook](deployment-forge.md) for a concrete Forge + DigitalOcean recipe.

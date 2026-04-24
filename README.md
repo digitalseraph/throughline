@@ -70,7 +70,9 @@ The E2E spec drives the full happy path: register → upload resume → create s
 
 ## Production
 
-See [`docs/production-readiness.md`](docs/production-readiness.md) for the full checklist: required env vars, external services, background process setup, first-deploy steps, monitoring, security, backups, rollback procedure, and a post-deploy smoke test.
+- [`docs/external-accounts-setup.md`](docs/external-accounts-setup.md) — every external account (OpenAI, Anthropic, OAuth providers, hosting, mail) and how to create + wire each one.
+- [`docs/deployment-forge.md`](docs/deployment-forge.md) — concrete Laravel Forge runbook for shipping to a DigitalOcean droplet with managed Postgres + Redis + Spaces.
+- [`docs/production-readiness.md`](docs/production-readiness.md) — full checklist: env vars, background processes, first-deploy steps, monitoring, security, backups, rollback, post-deploy smoke test.
 
 ## Deployment portability
 
