@@ -284,36 +284,36 @@ What the directives mean:
 
 ### Reverb doesn't auto-restart — wire it up
 
-`$RESTART_QUEUES()` only touches Horizon. Reverb is a separate Forge daemon and needs to restart after each deploy to load updated event classes.
+`$RESTART_QUEUES()` only touches Horizon. Reverb is a separate background process and needs to restart after each deploy to load updated event classes.
 
-- **Forge → your server → Processes tab → Daemons → Reverb daemon → enable "Restart After Deployment."** In the current Forge UI (2024+), Daemons, Queue Workers, and Scheduled Jobs all live under the server-level **Processes** tab.
-- Do the same on the Horizon daemon if it isn't already (Forge sets this ON by default, but verify).
+- **Forge → your server → Processes tab → Background Processes → Reverb → enable "Restart After Deployment."** In the current Forge UI, the "Processes" tab contains **Background Processes** (what older docs call Daemons) and **Scheduler**.
+- Do the same on the Horizon background process if it isn't already (Forge sets this ON by default, but verify).
 
 ### Enable Quick Deploy
 
 Site → Apps tab → **Enable Quick Deploy** (if you didn't already in Step 3c). Pushes to `main` will trigger the deploy script via GitHub webhook.
 
-## Step 7: Horizon as a supervised daemon
+## Step 7: Horizon as a background process
 
-Forge → your server → **Processes** tab → **Daemons** sub-section → **New Daemon**. (In Forge's current UI, Daemons, Queue Workers, and Scheduled Jobs all live under the server-level **Processes** tab.)
+Forge → your server → **Processes** tab → **Background Processes** sub-section → **Add Background Process**. (In Forge's current UI, the "Processes" tab contains **Background Processes** — what older docs and Supervisor config call "Daemons" — plus **Scheduler**. You create each process from scratch with the full `artisan` command; there's no pre-populated "Horizon" or "Reverb" entry to pick from.)
 
 - **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan horizon`
 - **Directory**: `/home/forge/throughline.yourdomain.com/current`
 - **User**: `forge`
 - **Processes**: 1
 - **Stop signal**: `SIGTERM`
-- **Stop wait**: 30 seconds
+- **Stop wait (seconds)**: 30
 - **Restart After Deployment**: **on** (so deploys reload Horizon cleanly)
 
-Save. Forge writes a Supervisor config and starts the daemon.
+Save. Forge writes a Supervisor config under the hood and starts the process.
 
-> Path uses `.../current/artisan` so Zero Downtime Deployment still resolves correctly — the `current` symlink points at whichever release is active, and the daemon keeps following it across deploys.
+> Path uses `.../current/artisan` so Zero Downtime Deployment still resolves correctly — the `current` symlink points at whichever release is active, and the process keeps following it across deploys.
 
 Verify: in the browser, visit `https://throughline.yourdomain.com/horizon` as an admin user — the dashboard should load, and the ring should be green.
 
-## Step 8: Reverb as a supervised daemon
+## Step 8: Reverb as a background process
 
-Same place (Processes → Daemons), second daemon.
+Same place (Processes → Background Processes), **Add Background Process** again.
 
 - **Command**: `php8.4 /home/forge/throughline.yourdomain.com/current/artisan reverb:start --host=0.0.0.0 --port=8080`
 - **Directory**: `/home/forge/throughline.yourdomain.com/current`
@@ -422,7 +422,7 @@ Walk through the critical paths:
 
 **Horizon pings but processes don't run:** check Redis connectivity from the droplet (`redis-cli -u <connection string> ping`). Managed Redis over TLS requires `predis` not `phpredis` unless you compile the TLS support in.
 
-**Reverb WebSocket 502/504:** the daemon isn't running or Nginx isn't forwarding `/app` correctly. Check **Forge → Server → Processes → Daemons** and the Nginx location block.
+**Reverb WebSocket 502/504:** the background process isn't running or Nginx isn't forwarding `/app` correctly. Check **Forge → Server → Processes → Background Processes** and the Nginx location block.
 
 **pgvector errors on migrate:** extension isn't enabled. See Step 5.
 
