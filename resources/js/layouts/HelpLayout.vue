@@ -21,6 +21,7 @@ const authUser = computed<{ id: number; name: string; email: string } | null>(
                 </Link>
 
                 <nav class="flex items-center gap-6 text-sm">
+                    <Link :href="route('about')" class="text-ink-2 hover:text-oxblood">About</Link>
                     <Link :href="route('help.index')" class="text-ink-2 hover:text-oxblood">Help</Link>
                     <template v-if="authUser">
                         <Link :href="route('dashboard')" class="text-ink-2 hover:text-oxblood">Dashboard</Link>
@@ -47,6 +48,7 @@ const authUser = computed<{ id: number; name: string; email: string } | null>(
             <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6">
                 <p>&copy; {{ new Date().getFullYear() }} {{ siteName }}</p>
                 <nav class="flex gap-6">
+                    <Link :href="route('about')" class="hover:text-oxblood">About</Link>
                     <Link :href="route('help.index')" class="hover:text-oxblood">Help</Link>
                     <a href="https://github.com/digitalseraph/throughline" target="_blank" rel="noopener" class="hover:text-oxblood">Source</a>
                 </nav>

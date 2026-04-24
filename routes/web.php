@@ -31,6 +31,13 @@ Route::get('/', function (BrandConfig $brand) {
     ]);
 })->name('home');
 
+Route::get('/about', function (BrandConfig $brand) {
+    return Inertia::render('About', [
+        'siteName' => $brand->name(),
+        'tagline' => $brand->tagline(),
+    ]);
+})->name('about');
+
 Route::get('dashboard', function (BrandConfig $brand) {
     return Inertia::render('Dashboard', [
         'user' => ['name' => auth()->user()->name],

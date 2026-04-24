@@ -16,8 +16,10 @@ defineProps<{
 
   <div class="min-h-screen bg-bone text-ink flex flex-col">
     <header class="flex items-center justify-between px-8 py-6">
-      <Wordmark size="sm" />
+      <Link href="/" class="inline-flex"><Wordmark size="sm" /></Link>
       <nav class="flex items-center gap-6 font-mono text-xs uppercase tracking-widest text-ink-3">
+        <Link href="/about" class="hover:text-oxblood transition-colors">About</Link>
+        <Link href="/help" class="hover:text-oxblood transition-colors">Help</Link>
         <Link v-if="canLogin" href="/login" class="hover:text-oxblood transition-colors">Sign in</Link>
         <Link v-if="canRegister" href="/register" class="hover:text-oxblood transition-colors">Create account</Link>
       </nav>
