@@ -30,6 +30,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Exclude test-only helper routes from CSRF verification so the
         // Playwright APIRequestContext (which has no session/token) can hit them.
         $middleware->validateCsrfTokens(except: ['testing/*']);
+
+        // We sit behind Cloudflare → Forge Nginx (TLS terminator) → PHP-FPM.
+        // Trust forwarded headers so the app sees the original scheme (https),
+        // client IP, and host — needed for url() helpers, $request->secure(),
+        // secure cookies, and rate limiting by real client IP.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         Integration::handles($exceptions);
