@@ -111,6 +111,8 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::post('errors/resumes/{resume}/retry-parse', [ErrorLogController::class, 'retryResumeParse'])->name('errors.resume.retry-parse');
         Route::post('errors/resumes/{resume}/retry-embed', [ErrorLogController::class, 'retryResumeEmbed'])->name('errors.resume.retry-embed');
         Route::post('errors/jobs/{canonical_job}/retry-embed', [ErrorLogController::class, 'retryJobEmbed'])->name('errors.job.retry-embed');
+        Route::post('errors/jobs/retry-all-stuck-embeds', [ErrorLogController::class, 'retryAllStuckJobEmbeddings'])->name('errors.job.retry-all-stuck-embeds');
+        Route::post('errors/resumes/retry-all-stuck-embeds', [ErrorLogController::class, 'retryAllStuckResumeEmbeddings'])->name('errors.resume.retry-all-stuck-embeds');
         Route::post('errors/matches/{match}/retry-rerank', [ErrorLogController::class, 'retryRerank'])->name('errors.match.retry-rerank');
     });
 

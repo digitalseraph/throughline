@@ -48,3 +48,8 @@ Schedule::command('costs:check-alert')
     ->dailyAt('01:00')
     ->name('throughline-costs-check-alert')
     ->withoutOverlapping();
+
+Schedule::command('embeddings:retry-stuck')
+    ->hourly()
+    ->name('throughline-embeddings-retry-stuck')
+    ->withoutOverlapping();

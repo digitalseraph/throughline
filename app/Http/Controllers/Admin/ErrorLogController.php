@@ -58,4 +58,42 @@ class ErrorLogController extends BaseController
 
         return redirect()->back();
     }
+
+    public function retryAllStuckJobEmbeddings(): RedirectResponse
+    {
+        $count = 0;
+        CanonicalJob::query()
+            ->whereNull('embedding')
+            ->whereNull('closed_at')
+            ->orderBy('id')
+            ->chunkById(200, function ($rows) use (&$count) {
+                foreach ($rows as $row) {
+                    EmbedJob::dispatch($row->id);
+                    $count++;
+                }
+            });
+
+        $this->audit('job.embed_retried_bulk', null, ['count' => $count]);
+
+        return redirect()->back()->with('status', "Re-dispatched {$count} job embeddings.");
+    }
+
+    public function retryAllStuckResumeEmbeddings(): RedirectResponse
+    {
+        $count = 0;
+        Resume::query()
+            ->where('parse_status', 'parsed')
+            ->whereNull('embedding')
+            ->orderBy('id')
+            ->chunkById(200, function ($rows) use (&$count) {
+                foreach ($rows as $row) {
+                    EmbedResume::dispatch($row->id);
+                    $count++;
+                }
+            });
+
+        $this->audit('resume.embed_retried_bulk', null, ['count' => $count]);
+
+        return redirect()->back()->with('status', "Re-dispatched {$count} resume embeddings.");
+    }
 }

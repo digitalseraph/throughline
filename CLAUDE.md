@@ -50,6 +50,7 @@ Dev server: http://localhost:8000. Vite: 5173. Postgres: 5432 (Docker). Redis: 6
 - `php artisan throughline:reminder-scan-now` — run the application reminder scan synchronously (for dogfood debugging)
 - `php artisan costs:close-month [--month=YYYY-MM]` — write the monthly cost snapshot (runs automatically on the 1st at 00:01 UTC)
 - `php artisan costs:check-alert` — check if current-month total exceeds `cost_alert_threshold_usd` and mail admins (one-per-month dedupe; runs daily at 01:00 UTC)
+- `php artisan embeddings:retry-stuck [--limit=200]` — re-dispatch EmbedJob/EmbedResume for rows whose embedding never landed (orphaned by a queue or API outage). Runs hourly via the scheduler.
 - `php artisan tinker` — REPL in app context
 - Horizon is gated by `Gate::define('viewHorizon')` registered in `HorizonServiceProvider` — admins only.
 
